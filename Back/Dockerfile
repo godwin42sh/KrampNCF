@@ -1,0 +1,18 @@
+FROM node:lts-alpine
+
+WORKDIR /home/node/app
+
+COPY package*.json ./
+RUN npm install --only=prod
+
+COPY ./src ./src
+COPY tsconfig.json ./
+
+RUN npm run build
+
+EXPOSE 8080
+ENV REDIS_URL=""
+ENV SNCF_API_URL=""
+ENV SNCF_API_KEY=""
+
+CMD [ "npm", "run", "start" ]

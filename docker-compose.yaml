@@ -1,0 +1,18 @@
+version: "3.9"
+services:
+  api:
+    hostname: api
+    links:
+      - redis
+    build: ./api
+    ports:
+      - "80:80"
+    depends_on:
+      - redis
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - SNCF_API_URL=https://api.navitia.io/v1
+      - SNCF_API_KEY=
+  webdav:
+    hostname: redis
+    image: redis:7.2.3
