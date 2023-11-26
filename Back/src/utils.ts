@@ -1,7 +1,8 @@
 import { format, parseISO } from 'date-fns';
 
-import { LineData } from './conf/lines-data';
 import { SNCF } from './sncf-api';
+
+import type { LineData } from './types/LineData';
 
 export async function getDateFromQuery(query: string | undefined) {
   const dateFrom = query

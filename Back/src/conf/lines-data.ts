@@ -1,18 +1,6 @@
-export interface LineDataFilters {
-  lines?: string;
-  commercial_modes?: string;
-}
+import { LineData } from '../types/LineData';
 
-export interface LineData {
-  id: number;
-  title: string;
-  stopAreaId: string;
-  stopAreaName: string;
-  stopFilters?: LineDataFilters;
-  directionAreaId: string;
-}
-
-export const linesData: LineData[] = [
+const linesData: LineData[] = [
   {
     id: 1,
     title: 'Ter Étampes - Paris',
@@ -36,3 +24,5 @@ export const linesData: LineData[] = [
     directionAreaId: 'stop_area:IDFM:59403',
   },
 ];
+
+export default linesData;

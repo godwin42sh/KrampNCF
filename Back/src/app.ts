@@ -1,8 +1,8 @@
 import dotenv from 'dotenv';
 import express from 'express';
 
+import linesData from './conf/lines-data';
 import { SNCF } from './sncf-api';
-import { LineData, linesData } from './conf/lines-data';
 import { fetchDataFromLineData, fetchDataFromLinesData, getDateFromQuery } from './utils';
 
 dotenv.config();
@@ -34,7 +34,7 @@ app.get('/departures/', async (req, res) => {
 
 app.get('/departures/:id', async (req, res) => {
   const { id } = req.params;
-  const lineData: LineData = linesData.filter((line) => line.id === Number(id))[0];
+  const lineData = linesData.filter((line) => line.id === Number(id))[0];
 
   if (!lineData) {
     res.status(404);
