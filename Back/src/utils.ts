@@ -28,13 +28,13 @@ export async function fetchDataFromLineData(sncf: SNCF, lineData: LineData, date
 
   const resTimes = departures.data.map((departure) => ({
     title: departure.display_informations.headsign,
-    departureTime: format(parseISO(departure.stop_date_time.departure_date_time), 'dd/MM/yyyy HH:mm:ss'),
-    arrivaleTime: format(parseISO(departure.stop_date_time.arrival_date_time), 'dd/MM/yyyy HH:mm:ss'),
+    departureTime: format(parseISO(departure.stop_date_time.departure_date_time), 'HH:mm'),
+    arrivaleTime: format(parseISO(departure.stop_date_time.arrival_date_time), 'HH:mm'),
     // raw: departure,
   }));
 
   return {
-    title: lineData.title,
+    title: `${lineData.title} - ${format(dateFrom, 'dd/MM')}`,
     data: resTimes,
     isCached: departures.isCached,
   };
