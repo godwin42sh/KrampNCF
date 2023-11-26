@@ -4,15 +4,17 @@ services:
     hostname: api
     links:
       - redis
-    build: ./api
+    image: godwin42sh/krampncf:latest
+    # build: ./Back
     ports:
       - "80:80"
     depends_on:
       - redis
     environment:
+      - PORT=80
       - REDIS_URL=redis://redis:6379
       - SNCF_API_URL=https://api.navitia.io/v1
       - SNCF_API_KEY=
-  webdav:
+  redis:
     hostname: redis
     image: redis:7.2.3

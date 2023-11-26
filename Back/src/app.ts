@@ -8,7 +8,7 @@ import { fetchDataFromLineData, fetchDataFromLinesData, getDateFromQuery } from 
 dotenv.config();
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 80;
 
 app.get('/', async (req, res) => {
   const sncf = new SNCF(process.env.SNCF_API_URL as string, process.env.SNCF_API_KEY as string);
