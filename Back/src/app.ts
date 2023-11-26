@@ -2,20 +2,13 @@ import dotenv from 'dotenv';
 import express from 'express';
 
 import linesData from './conf/lines-data';
-import { SNCF } from './sncf-api';
 import { fetchDataFromLineData, fetchDataFromLinesData, getDateFromQuery } from './utils';
+import { SNCF } from './sncf-api';
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 80;
-
-app.get('/', async (req, res) => {
-  const sncf = new SNCF(process.env.SNCF_API_URL as string, process.env.SNCF_API_KEY as string);
-  const stations = await sncf.getStations();
-
-  res.send(`Hello World! ${JSON.stringify(stations)}`);
-});
 
 app.get('/departures/', async (req, res) => {
   const dateFrom = await getDateFromQuery(req.query.dateFrom as string | undefined);
@@ -26,7 +19,8 @@ app.get('/departures/', async (req, res) => {
     return;
   }
 
-  const resTimes = await fetchDataFromLinesData(linesData, dateFrom);
+  const sncf = new SNCF(process.env.SNCF_API_URL as string, process.env.SNCF_API_KEY as string);
+  const resTimes = await fetchDataFromLinesData(sncf, linesData, dateFrom);
 
   res.setHeader('Content-Type', 'application/json');
   res.send(JSON.stringify(resTimes));
@@ -50,7 +44,8 @@ app.get('/departures/:id', async (req, res) => {
     return;
   }
 
-  const resTimes = await fetchDataFromLineData(lineData, dateFrom);
+  const sncf = new SNCF(process.env.SNCF_API_URL as string, process.env.SNCF_API_KEY as string);
+  const resTimes = await fetchDataFromLineData(sncf, lineData, dateFrom);
 
   res.setHeader('Content-Type', 'application/json');
   res.send(JSON.stringify(resTimes));

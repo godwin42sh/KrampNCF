@@ -16,12 +16,14 @@ export async function getDateFromQuery(query: string | undefined) {
   return dateFrom;
 }
 
-export async function fetchDataFromLineData(lineData: LineData, dateFrom: Date) {
-  const sncf = new SNCF(process.env.SNCF_API_URL as string, process.env.SNCF_API_KEY as string);
+export async function fetchDataFromLineData(sncf: SNCF, lineData: LineData, dateFrom: Date) {
   const departures = await sncf.getDepartures(lineData.stopAreaId, dateFrom, lineData.stopFilters);
 
+  const dateFromStr = format(dateFrom, 'yyyyMMdd');
+
   departures.data = departures.data.filter(
-    (departure) => departure.route.direction.id === lineData.directionAreaId,
+    (departure) => departure.route.direction.id === lineData.directionAreaId
+      && departure.stop_date_time.departure_date_time.startsWith(dateFromStr),
   );
 
   const resTimes = departures.data.map((departure) => ({
@@ -38,8 +40,8 @@ export async function fetchDataFromLineData(lineData: LineData, dateFrom: Date) 
   };
 }
 
-export async function fetchDataFromLinesData(lineDatas: LineData[], dateFrom: Date) {
-  const promises = lineDatas.map((lineData) => fetchDataFromLineData(lineData, dateFrom));
+export async function fetchDataFromLinesData(sncf: SNCF, lineDatas: LineData[], dateFrom: Date) {
+  const promises = lineDatas.map((lineData) => fetchDataFromLineData(sncf, lineData, dateFrom));
 
   const resTimes = await Promise.all(promises);
 
