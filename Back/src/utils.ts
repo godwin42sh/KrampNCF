@@ -4,10 +4,15 @@ import { SNCF } from './sncf-api';
 
 import type { LineData } from './types/LineData';
 
+export function subtractHours(date: Date, hours: number) {
+  date.setHours(date.getHours() - hours);
+  return date;
+}
+
 export async function getDateFromQuery(query: string | undefined) {
   const dateFrom = query
     ? new Date(query)
-    : new Date(new Date().toDateString());
+    : subtractHours(new Date(), 1);
 
   if (Number.isNaN(dateFrom.getTime())) {
     return false;

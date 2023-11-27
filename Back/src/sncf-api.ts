@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from "axios";
+import { format } from "date-fns";
 import Redis from "ioredis";
 
 import type { Departure } from "./types/Departure";
@@ -42,8 +43,9 @@ export class SNCF {
     }
 
     const url = `stop_areas/${stationId}${additionalParams}/departures?from_datetime=${dateFrom.toISOString()}`;
+    const redisKey = `${stationId}${additionalParams}/departures/${format(dateFrom, 'yyyyMMdd.HH.mm')}`;
 
-    const cached = await redis.get(url);
+    const cached = await redis.get(redisKey);
 
     if (cached) {
       console.log('using cached result');
@@ -63,7 +65,7 @@ export class SNCF {
       catch (e) {
         console.log(e);
       }
-      redis.set(url, JSON.stringify(resData), 'EX', 120);
+      redis.set(redisKey, JSON.stringify(resData), 'EX', 120);
       return {
         isCached: false,
         data: resData,
