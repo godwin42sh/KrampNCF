@@ -30,6 +30,10 @@ function makeTrain(train) {
     return;
   }
   train.data.forEach(data => {
+    if (!data.departure) {
+        return;
+    }
+
     const dataStack = trainStack.addStack();
     dataStack.layoutHorizontally();
 
@@ -37,14 +41,20 @@ function makeTrain(train) {
     nameStation.font = Font.systemFont(14);
     dataStack.addSpacer(5);
 
-    const time = dataStack.addText(data.departureTime);
+    let timeText = data.time;
+    let color = Color.White;
+
+    if (data.departure.delay) {
+      timeText = `${data.time} + ${data.departure.delay}m`;
+    }
+    const time = dataStack.addText(timeText);
     time.font = Font.boldSystemFont(16);
   });
 
   trainStack.setPadding(0, 10, 0, 10);
 }
 
-const url = "https://sncf.krampflix.ovh/departures/" + (idDeparture ? idDeparture : "");
+const url = "https://sncf.krampflix.ovh/departuresRT/" + (idDeparture ? idDeparture : "");
 const req = new Request(url);
 const reqData = await req.loadJSON();
 

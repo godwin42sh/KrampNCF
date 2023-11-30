@@ -15,5 +15,7 @@
         "sourceType": "module"
     },
     "rules": {
+        "brace-style": "off",
+        "@typescript-eslint/brace-style": "error"
     }
 }

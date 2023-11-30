@@ -12,9 +12,10 @@ services:
       - redis
     environment:
       - PORT=80
-      - REDIS_URL=redis://redis:6379
-      - SNCF_API_URL=https://api.navitia.io/v1
+      - REDIS_URL=
+      - SNCF_API_URL=https://api.sncf.com/v1
       - SNCF_API_KEY=
+      - SNCF_GTFSRT_URL=https://proxy.transport.data.gouv.fr/resource/sncf-ter-gtfs-rt-trip-updates
   redis:
     hostname: redis
     image: redis:7.2.3

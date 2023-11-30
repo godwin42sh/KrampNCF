@@ -4,6 +4,8 @@ const linesData: LineData[] = [
   {
     id: 1,
     title: 'Étampes',
+    gtfsId: 'StopPoint:OCETrain TER-87545137',
+    gtfsIdTo: 'StopPoint:OCETrain TER-87547000',
     stopAreaId: 'stop_area:IDFM:478855',
     stopAreaName: 'Étampes',
     stopFilters: {
@@ -15,6 +17,8 @@ const linesData: LineData[] = [
   {
     id: 2,
     title: 'Austerlitz',
+    gtfsId: 'StopPoint:OCETrain TER-87547000',
+    gtfsIdTo: 'StopPoint:OCETrain TER-87545137',
     stopAreaId: 'stop_area:IDFM:71135',
     stopAreaName: 'Gare d\'Austerlitz',
     stopFilters: {

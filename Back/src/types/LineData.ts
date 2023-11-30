@@ -10,4 +10,6 @@ export interface LineData {
   stopAreaName: string;
   stopFilters?: LineDataFilters;
   directionAreaId: string;
+  gtfsId: string;
+  gtfsIdTo?: string;
 }
