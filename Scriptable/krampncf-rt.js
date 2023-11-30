@@ -6,10 +6,10 @@ const hours = dateNow.getHours();
 const idDeparture = args.widgetParameter;
 
 if ((hours >= 7 && hours <= 8) || (hours >= 16 && hours <= 18)) {
-    widget.refreshAfterDate = new Date(dateNow.getTime() + 1000 * 60 * 3);
+    widget.refreshAfterDate = new Date(dateNow.getTime() + 2000 * 60 * 3);
 }
 else {
-    widget.refreshAfterDate = new Date(dateNow.getTime() + 1000 * 60 * 30);
+    widget.refreshAfterDate = new Date(dateNow.getTime() + 2000 * 60 * 30);
 }
 
 const stack = widget.addStack();
@@ -54,7 +54,7 @@ function makeTrain(train) {
   trainStack.setPadding(0, 10, 0, 10);
 }
 
-const url = "https://sncf.krampflix.ovh/departuresRT/" + (idDeparture ? idDeparture : "");
+const url = `https://${token}@sncf.krampflix.ovh/departuresRT/${(idDeparture ? idDeparture : "")}`;
 const req = new Request(url);
 const reqData = await req.loadJSON();
 

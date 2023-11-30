@@ -25,8 +25,8 @@ app.get('/departuresRT', async (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(JSON.stringify(
     [
-      departuresTo,
       departuresFrom,
+      departuresTo,
     ],
   ));
 });

@@ -41,10 +41,10 @@ function makeTrain(train) {
     time.font = Font.boldSystemFont(16);
   });
 
-  trainStack.setPadding(0, 10, 0, 10);
+    trainStack.setPadding(0, 10, 0, 10);
 }
 
-const url = "https://sncf.krampflix.ovh/departures/" + (idDeparture ? idDeparture : "");
+const url = `https://${token}@sncf.krampflix.ovh/departures/${(idDeparture ? idDeparture : "")}`;
 const req = new Request(url);
 const reqData = await req.loadJSON();
 

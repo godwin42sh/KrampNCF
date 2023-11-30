@@ -1,4 +1,5 @@
 import { format, parseISO } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import GtfsRealtimeBindings from 'gtfs-realtime-bindings';
 
 import { SNCF } from './sncf-api';
@@ -59,7 +60,7 @@ export function buildDateObject(
   stopTimeEvent: GtfsRealtimeBindings.transit_realtime.TripUpdate.IStopTimeEvent,
 ) {
   let eventObject: Event = {
-    time: format(new Date(stopTimeEvent.time as number * 1000), 'HH:mm'),
+    time: formatInTimeZone(new Date(stopTimeEvent.time as number * 1000), 'Europe/Paris', 'HH:mm'),
   };
 
   if (stopTimeEvent.delay) {
@@ -67,12 +68,13 @@ export function buildDateObject(
       ...eventObject,
       delay: stopTimeEvent.delay / 60,
       realTime:
-        format(
-          new Date(
-            (stopTimeEvent.time as number) * 1000 + (stopTimeEvent.delay * 1000),
-          ),
-          'HH:mm',
+      formatInTimeZone(
+        new Date(
+          (stopTimeEvent.time as number) * 1000 + (stopTimeEvent.delay * 1000),
         ),
+        'Europe/Paris',
+        'HH:mm',
+      ),
     };
   }
 
