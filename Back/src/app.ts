@@ -6,9 +6,11 @@ import {
   fetchDataFromLineData,
   fetchDataFromLinesData,
   getDateFromQuery,
-  getDeparturesFromLineDataRealtime,
-  getDeparturesFromToRealtime,
 } from './utils';
+import {
+  getDeparturesFromToRealtime,
+  getDeparturesFromLineDataRealtime,
+} from './utilsRT';
 import { SNCF } from './sncf-api';
 import { readGtfsRT } from './gtfs-api';
 

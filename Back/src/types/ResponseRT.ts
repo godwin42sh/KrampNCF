@@ -1,10 +1,10 @@
-export type Event = {
+export type TrainTimeEvent = {
   time: string;
   delay?: number;
-  realTime?: string;
+  scheduledTime?: string;
 };
 
-export type ResponseRT = {
+export type TrainResponseRT = {
   title: string;
   departure: Event;
 };
