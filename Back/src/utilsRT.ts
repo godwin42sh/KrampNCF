@@ -69,7 +69,7 @@ export async function getDeparturesFromToRealtime(
         } else if (fromStopTimeUpdate && stopTimeUpdate.stopId?.includes(lineTo.gtfsId)) {
           res.push(
             {
-              ...{ title: lineTo.title, raw: entity },
+              ...{ title: lineTo.title },
               ...calcDatesFromStopTimeUpdate(fromStopTimeUpdate),
             },
           );
