@@ -10,7 +10,8 @@ COPY tsconfig.json ./
 
 RUN npm run build
 
-EXPOSE 8080
+ENV TZ="Europe/Paris"
+
 ENV REDIS_URL=""
 ENV SNCF_API_URL=""
 ENV SNCF_API_KEY=""
