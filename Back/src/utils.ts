@@ -25,6 +25,11 @@ export async function getDateFromQuery(query: string | undefined) {
 
 export async function fetchDataFromLineData(sncf: SNCF, lineData: LineData, dateFrom: Date) {
   const departures = await sncf.getDepartures(lineData.stopAreaId, dateFrom, lineData.stopFilters);
+  const res = {
+    title: `${lineData.title} - ${format(dateFrom, 'dd/MM')}`,
+    data: [],
+    isCached: departures.isCached,
+  };
 
   const dateFromStr = format(dateFrom, 'yyyyMMdd');
 
@@ -34,7 +39,7 @@ export async function fetchDataFromLineData(sncf: SNCF, lineData: LineData, date
   );
 
   if (!departures.data.length) {
-    return [];
+    return res;
   }
 
   const [feed] = await readGtfsRT();
@@ -46,9 +51,8 @@ export async function fetchDataFromLineData(sncf: SNCF, lineData: LineData, date
   );
 
   return {
-    title: `${lineData.title} - ${format(dateFrom, 'dd/MM')}`,
+    ...res,
     data: resTimes,
-    isCached: departures.isCached,
   };
 }
 
