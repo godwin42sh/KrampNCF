@@ -4,15 +4,19 @@ import express from 'express';
 import linesData from './conf/lines-data';
 import {
   fetchDataFromLineData,
+  fetchDataFromLineDataPrim,
   fetchDataFromLinesData,
   getDateFromQuery,
-} from './utils';
+} from './utils/utils';
 import {
   getDeparturesFromToRealtime,
   getDeparturesFromLineDataRealtime,
-} from './utilsRT';
-import { SNCF } from './sncf-api';
-import { readGtfsRT } from './gtfs-api';
+} from './utils/utilsRT';
+import { SNCF } from './services/sncf-api';
+import { readGtfsRT } from './services/gtfs-api';
+import primsData from './conf/prim-data';
+import { Prim } from './services/prim-api';
+import { getDeparturesFromPrim } from './utils/utilsPrim';
 
 dotenv.config();
 
@@ -71,7 +75,7 @@ app.get('/departures/', async (req, res) => {
   }
 
   const sncf = new SNCF(process.env.SNCF_API_URL as string, process.env.SNCF_API_KEY as string);
-  const resTimes = await fetchDataFromLinesData(sncf, linesData, dateFrom);
+  const resTimes = await fetchDataFromLinesData(sncf, linesData, dateFrom, 'prim');
 
   res.setHeader('Content-Type', 'application/json');
   res.send(JSON.stringify(resTimes));
@@ -96,10 +100,41 @@ app.get('/departures/:id', async (req, res) => {
   }
 
   const sncf = new SNCF(process.env.SNCF_API_URL as string, process.env.SNCF_API_KEY as string);
-  const resTimes = await fetchDataFromLineData(sncf, lineData, dateFrom);
+  const resTimes = await fetchDataFromLineDataPrim(sncf, lineData, dateFrom);
 
   res.setHeader('Content-Type', 'application/json');
   res.send(JSON.stringify(resTimes));
+});
+
+app.get('/departuresPrim/:id', async (req, res) => {
+  const { id } = req.params;
+  const primData = primsData.find((line) => line.id === Number(id));
+
+  if (!primData) {
+    res.status(404);
+    res.send('Prim data not found');
+    return;
+  }
+
+  const prim = new Prim(
+    process.env.SNCF_API_PRIM_URL as string,
+    process.env.SNCF_API_PRIM_KEY as string,
+  );
+
+  const departuresFrom = await prim.getDepartures(primData);
+
+  if (departuresFrom.data.length === 0) {
+    res.status(404);
+    res.send();
+    return;
+  }
+  const departuresRes = getDeparturesFromPrim(primData, departuresFrom.data);
+
+  res.setHeader('Content-Type', 'application/json');
+  res.send(JSON.stringify({
+    title: primData.departureName,
+    data: departuresRes,
+  }));
 });
 
 app.listen(port, () => {

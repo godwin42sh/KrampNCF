@@ -2,9 +2,9 @@ import axios, { AxiosInstance } from "axios";
 import { format } from "date-fns";
 import Redis from "ioredis";
 
-import type { Departure } from "./types/Departure";
-import type { IsCached } from "./types/IsCached";
-import type { LineDataFilters } from "./types/LineData";
+import type { Departure } from "../types/Departure";
+import type { IsCached } from "../types/IsCached";
+import type { LineDataFilters } from "../types/LineData";
 
 export class SNCF {
 

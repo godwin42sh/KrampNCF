@@ -2,12 +2,12 @@ import { format, parseISO } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 import type GtfsRealtimeBindings from 'gtfs-realtime-bindings';
 
-import type { Departure } from './types/Departure';
-import type { LineData } from './types/LineData';
-import type { TrainResponse } from './types/Response';
-import type { TrainTimeEvent } from './types/ResponseRT';
+import type { Departure } from '../types/Departure';
+import type { LineData } from '../types/LineData';
+import type { TrainResponse } from '../types/Response';
+import type { TrainTimeEvent } from '../types/ResponseRT';
 
-import { readGtfsRT } from './gtfs-api';
+import { readGtfsRT } from '../services/gtfs-api';
 
 function buildDateObject(
   stopTimeEvent: GtfsRealtimeBindings.transit_realtime.TripUpdate.IStopTimeEvent,
@@ -137,6 +137,7 @@ export function getDeparturesTimesWithDelayFromFeed(
 }
 
 export function getDeparturesTimeWithDelayFromTimeUpdates(
+  lineData: LineData,
   tripsDelayed: GtfsRealtimeBindings.transit_realtime.TripUpdate.IStopTimeUpdate[],
   departure: Departure,
 ) {
@@ -144,9 +145,11 @@ export function getDeparturesTimeWithDelayFromTimeUpdates(
   const departureDate = parseISO(departure.stop_date_time.departure_date_time);
 
   const res: TrainResponse = {
-    title: departure.display_informations.headsign,
+    title: lineData.destinationName,
     arrivalTime: format(arrivalDate, 'HH:mm'),
     departureTime: format(departureDate, 'HH:mm'),
+    trainNumber: departure.display_informations.trip_short_name,
+    // raw: departure,
   };
 
   tripsDelayed.forEach((timeUpdate) => {
