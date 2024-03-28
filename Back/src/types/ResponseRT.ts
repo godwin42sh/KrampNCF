@@ -6,5 +6,5 @@ export type TrainTimeEvent = {
 
 export type TrainResponseRT = {
   title: string;
-  departure: Event;
+  departure: TrainTimeEvent;
 };
