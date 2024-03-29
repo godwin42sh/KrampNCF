@@ -13,5 +13,6 @@ export interface LineData {
   directionAreaId: string;
   gtfsId: string;
   gtfsIdTo?: string;
-  primDataId: number
+  primDataId: number;
+  crawlUrlParam: string;
 }

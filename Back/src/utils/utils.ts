@@ -1,5 +1,7 @@
 import { format } from 'date-fns';
 
+import { Crawl } from '../services/crawl-api';
+import { TrainResponse } from '../types/Response';
 import { Prim } from '../services/prim-api';
 import type { LineData } from '../types/LineData';
 
@@ -7,7 +9,7 @@ import { SNCF } from '../services/sncf-api';
 import { readGtfsRT } from '../services/gtfs-api';
 import { getDeparturesTimesWithDelayFromFeed, getDeparturesTimeWithDelayFromTimeUpdates } from './utilsRT';
 import primsData from '../conf/prim-data';
-import { getDeparturesFromPrim, getDeparturesFromScheduledAndPrim } from './utilsPrim';
+import { getDeparturesFromScheduledAndPrim } from './utilsPrim';
 
 export function subtractHours(date: Date, hours: number) {
   date.setHours(date.getHours() - hours);
@@ -60,6 +62,22 @@ export async function fetchDataFromLineData(sncf: SNCF, lineData: LineData, date
   };
 }
 
+export async function addDockToTrainResponse(lineData: LineData, trainResponses: TrainResponse[]) {
+  const crawl = new Crawl(process.env.SNCF_CRAWL_URL as string);
+  const crawlRes = await crawl.getDepartures(lineData);
+
+  return trainResponses.map((train) => {
+    const crawlMatching = crawlRes.data.find((cres) => cres.trainNumber === train.trainNumber);
+
+    if (!crawlMatching?.dock) return train;
+
+    return {
+      ...train,
+      dock: crawlMatching.dock,
+    };
+  });
+}
+
 export async function fetchDataFromLineDataPrim(sncf: SNCF, lineData: LineData, dateFrom: Date) {
   const departures = await sncf.getDepartures(lineData.stopAreaId, dateFrom, lineData.stopFilters);
 
@@ -100,7 +118,7 @@ export async function fetchDataFromLineDataPrim(sncf: SNCF, lineData: LineData, 
 
   return {
     ...res,
-    data: resTimes,
+    data: await addDockToTrainResponse(lineData, resTimes),
   };
 }
 

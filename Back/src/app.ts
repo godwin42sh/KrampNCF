@@ -3,7 +3,6 @@ import express from 'express';
 
 import linesData from './conf/lines-data';
 import {
-  fetchDataFromLineData,
   fetchDataFromLineDataPrim,
   fetchDataFromLinesData,
   getDateFromQuery,
@@ -17,6 +16,7 @@ import { readGtfsRT } from './services/gtfs-api';
 import primsData from './conf/prim-data';
 import { Prim } from './services/prim-api';
 import { getDeparturesFromPrim } from './utils/utilsPrim';
+import { Crawl } from './services/crawl-api';
 
 dotenv.config();
 
@@ -135,6 +135,24 @@ app.get('/departuresPrim/:id', async (req, res) => {
     title: primData.departureName,
     data: departuresRes,
   }));
+});
+
+app.get('/departuresCrawl/:id', async (req, res) => {
+  const { id } = req.params;
+  const lineData = linesData.filter((line) => line.id === Number(id))[0];
+
+  if (!lineData) {
+    res.status(404);
+    res.send('Line not found');
+    return;
+  }
+
+  const crawl = new Crawl(process.env.SNCF_CRAWL_URL as string);
+
+  const crawlRes = await crawl.getDepartures(lineData);
+
+  res.setHeader('Content-Type', 'application/json');
+  res.send(JSON.stringify(crawlRes));
 });
 
 app.listen(port, () => {
