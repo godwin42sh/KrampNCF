@@ -15,6 +15,7 @@ const linesData: LineData[] = [
     },
     directionAreaId: 'stop_area:IDFM:71135',
     primDataId: 1,
+    crawlUrlParam: 'etampes-87545137',
   },
   {
     id: 2,
@@ -30,6 +31,7 @@ const linesData: LineData[] = [
     },
     directionAreaId: 'stop_area:IDFM:59403',
     primDataId: 2,
+    crawlUrlParam: 'paris-austerlitz-87547000',
   },
 ];
 
