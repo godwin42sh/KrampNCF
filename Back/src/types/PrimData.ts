@@ -3,7 +3,9 @@ export interface PrimData {
   departureName: string;
   destinationName: string;
   primDepartureRef: string;
-  primDestinationRef?: string;
   primLineRef: string;
+  primJourneyNote?: string[];
+  primDestinationRef?: string;
   trainNumberRefPrefix?: string;
+  type: string;
 }

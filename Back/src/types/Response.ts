@@ -1,3 +1,5 @@
+import type { RTFetchType } from './RTFetchType';
+
 export type TrainResponse = {
   title: string;
   arrivalTime: string;
@@ -6,4 +8,11 @@ export type TrainResponse = {
   raw?: any;
   trainNumber?: string;
   dock?: string;
+};
+
+export type DeparturesResponse = {
+  title: string;
+  data: TrainResponse[];
+  fetchType: RTFetchType;
+  isCached: boolean;
 };

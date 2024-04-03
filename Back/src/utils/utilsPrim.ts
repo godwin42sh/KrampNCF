@@ -1,10 +1,13 @@
 import { differenceInMinutes, format, parseISO } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
-import { LineData } from '../types/LineData';
-import { PrimData } from '../types/PrimData';
-import { MonitoredStopVisit, StopMonitoringDelivery } from '../types/PrimSNCF';
-import { TrainResponse } from '../types/Response';
-import { Departure } from '../types/Departure';
+import type { MonitoredStopVisit } from '../types/PrimSNCF';
+import type { RTFetchType } from '../types/RTFetchType';
+import type { Departure } from '../types/Departure';
+import type { LineData } from '../types/LineData';
+import type { PrimData } from '../types/PrimData';
+
+import { Prim } from '../services/prim-api';
+import { DeparturesResponse, TrainResponse } from '../types/Response';
 
 function buildDepartureFromStops(
   primData: PrimData,
@@ -19,6 +22,11 @@ function buildDepartureFromStops(
       return;
     }
     if (visit.MonitoredVehicleJourney.LineRef.value !== primData.primLineRef) {
+      return;
+    }
+
+    if (primData.primJourneyNote
+      && !primData.primJourneyNote.includes(visit.MonitoredVehicleJourney.JourneyNote[0].value)) {
       return;
     }
 
@@ -56,14 +64,22 @@ function buildDepartureFromStops(
       trainNumber: visit.MonitoredVehicleJourney.TrainNumbers.TrainNumberRef[0].value,
     };
 
-    if (visit.MonitoredVehicleJourney.MonitoredCall.DepartureStatus !== ''
-    && visit.MonitoredVehicleJourney.MonitoredCall.DepartureStatus !== 'onTime'
-    && visit.MonitoredVehicleJourney.MonitoredCall.AimedDepartureTime
+    let delay = 0;
+
+    if (visit.MonitoredVehicleJourney.MonitoredCall.AimedDepartureTime
     && visit.MonitoredVehicleJourney.MonitoredCall.ExpectedDepartureTime) {
-      tmp.delay = differenceInMinutes(
-        visit.MonitoredVehicleJourney.MonitoredCall.AimedDepartureTime,
-        visit.MonitoredVehicleJourney.MonitoredCall.ExpectedDepartureTime,
+      delay = differenceInMinutes(
+        parseISO(visit.MonitoredVehicleJourney.MonitoredCall.ExpectedDepartureTime),
+        parseISO(visit.MonitoredVehicleJourney.MonitoredCall.AimedDepartureTime),
       );
+    }
+
+    if (delay) {
+      tmp.delay = delay;
+    }
+
+    if (visit.MonitoredVehicleJourney.MonitoredCall.ArrivalPlatformName?.value) {
+      tmp.dock = visit.MonitoredVehicleJourney.MonitoredCall.ArrivalPlatformName?.value;
     }
 
     res.push(tmp as TrainResponse);
@@ -72,14 +88,24 @@ function buildDepartureFromStops(
   return res;
 }
 
-export function getDeparturesFromPrim(
+export async function getDeparturesFromPrim(
   primData: PrimData,
-  primFetchedData: StopMonitoringDelivery[],
   trainNumbersFilter: string[] = [],
-) {
+): Promise<false | DeparturesResponse> {
+  const prim = new Prim(
+    process.env.SNCF_API_PRIM_URL as string,
+    process.env.SNCF_API_PRIM_KEY as string,
+  );
+
+  const departuresFrom = await prim.getDepartures(primData);
+
+  if (departuresFrom.data.length === 0) {
+    return false;
+  }
+
   let res: TrainResponse[] = [];
 
-  primFetchedData.forEach((departure) => {
+  departuresFrom.data.forEach((departure) => {
     res = [
       ...res,
       ...buildDepartureFromStops(
@@ -90,7 +116,12 @@ export function getDeparturesFromPrim(
     ];
   });
 
-  return res;
+  return {
+    title: primData.departureName,
+    data: res,
+    isCached: departuresFrom.isCached,
+    fetchType: 'prim' as RTFetchType,
+  };
 }
 
 function mergePrimAndScheduled(
@@ -114,7 +145,7 @@ function mergePrimAndScheduled(
 
   const delay = differenceInMinutes(new Date(primDepartureTimeRaw), initialDepartureDate);
 
-  if (delay <= 4) {
+  if (delay === 0) {
     return resInit;
   }
 
@@ -152,7 +183,6 @@ export function getDeparturesFromScheduledAndPrim(
     arrivalTime: format(arrivalDate, 'HH:mm'),
     departureTime: format(departureDate, 'HH:mm'),
     trainNumber: departure.display_informations.trip_short_name,
-    // raw: departure,
   };
 
   const primMatching = primFetchedData.find(
