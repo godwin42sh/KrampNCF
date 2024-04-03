@@ -3,9 +3,10 @@ import express from 'express';
 
 import linesData from './conf/lines-data';
 import {
-  fetchDataFromLineDataPrim,
+  fetchDataFromLineData,
   fetchDataFromLinesData,
   getDateFromQuery,
+  getDefaultFetchRTMethod,
 } from './utils/utils';
 import {
   getDeparturesFromToRealtime,
@@ -14,9 +15,9 @@ import {
 import { SNCF } from './services/sncf-api';
 import { readGtfsRT } from './services/gtfs-api';
 import primsData from './conf/prim-data';
-import { Prim } from './services/prim-api';
 import { getDeparturesFromPrim } from './utils/utilsPrim';
 import { Crawl } from './services/crawl-api';
+import { DeparturesResponse } from './types/Response';
 
 dotenv.config();
 
@@ -75,7 +76,12 @@ app.get('/departures/', async (req, res) => {
   }
 
   const sncf = new SNCF(process.env.SNCF_API_URL as string, process.env.SNCF_API_KEY as string);
-  const resTimes = await fetchDataFromLinesData(sncf, linesData, dateFrom, 'prim');
+  const resTimes = await fetchDataFromLinesData(
+    sncf,
+    linesData,
+    dateFrom,
+    getDefaultFetchRTMethod(),
+  );
 
   res.setHeader('Content-Type', 'application/json');
   res.send(JSON.stringify(resTimes));
@@ -100,7 +106,7 @@ app.get('/departures/:id', async (req, res) => {
   }
 
   const sncf = new SNCF(process.env.SNCF_API_URL as string, process.env.SNCF_API_KEY as string);
-  const resTimes = await fetchDataFromLineDataPrim(sncf, lineData, dateFrom);
+  const resTimes = await fetchDataFromLineData(sncf, lineData, dateFrom, getDefaultFetchRTMethod());
 
   res.setHeader('Content-Type', 'application/json');
   res.send(JSON.stringify(resTimes));
@@ -116,25 +122,48 @@ app.get('/departuresPrim/:id', async (req, res) => {
     return;
   }
 
-  const prim = new Prim(
-    process.env.SNCF_API_PRIM_URL as string,
-    process.env.SNCF_API_PRIM_KEY as string,
-  );
+  const departuresRes = await getDeparturesFromPrim(primData);
 
-  const departuresFrom = await prim.getDepartures(primData);
-
-  if (departuresFrom.data.length === 0) {
+  if (departuresRes === false) {
     res.status(404);
     res.send();
     return;
   }
-  const departuresRes = getDeparturesFromPrim(primData, departuresFrom.data);
 
   res.setHeader('Content-Type', 'application/json');
-  res.send(JSON.stringify({
-    title: primData.departureName,
-    data: departuresRes,
-  }));
+  res.send(JSON.stringify(departuresRes));
+});
+
+app.get('/departuresPrimByType/:type', async (req, res) => {
+  const { type } = req.params;
+  const primData = primsData.filter((line) => line.type === type);
+
+  if (!primData.length) {
+    res.status(404);
+    res.send('Prim data not found');
+    return;
+  }
+
+  const settledRes = await Promise.allSettled(
+    primData.map(async (prim) => getDeparturesFromPrim(prim)),
+  );
+
+  const departuresRes = settledRes.reduce((acc: DeparturesResponse[], settled) => {
+    if (settled.status === 'fulfilled' && settled.value !== false) {
+      acc.push(settled.value);
+    }
+
+    return acc;
+  }, []);
+
+  if (!departuresRes.length) {
+    res.status(404);
+    res.send();
+    return;
+  }
+
+  res.setHeader('Content-Type', 'application/json');
+  res.send(JSON.stringify(departuresRes));
 });
 
 app.get('/departuresCrawl/:id', async (req, res) => {

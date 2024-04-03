@@ -53,14 +53,14 @@ export interface MonitoredCall {
   StopPointName: MonitoringRef[];
   VehicleAtStop: boolean;
   DestinationDisplay: MonitoringRef[];
-  ExpectedArrivalTime?: Date;
-  ExpectedDepartureTime?: Date;
+  ExpectedArrivalTime?: string;
+  ExpectedDepartureTime?: string;
   DepartureStatus: string;
   Order: number;
-  AimedArrivalTime?: Date;
+  AimedArrivalTime?: string;
   ArrivalPlatformName?: MonitoringRef;
   ArrivalStatus: string;
-  AimedDepartureTime?: Date;
+  AimedDepartureTime?: string;
 }
 
 export interface TrainNumbers {
