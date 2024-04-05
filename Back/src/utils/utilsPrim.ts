@@ -116,8 +116,10 @@ export async function getDeparturesFromPrim(
     ];
   });
 
+  const dateNow = new Date();
+
   return {
-    title: primData.departureName,
+    title: `${primData.departureName} - ${format(dateNow, 'dd/MM')}`,
     data: res,
     isCached: departuresFrom.isCached,
     fetchType: 'prim' as RTFetchType,
