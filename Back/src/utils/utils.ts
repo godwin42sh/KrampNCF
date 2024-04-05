@@ -61,7 +61,7 @@ export async function fetchDataFromLineDataGTFS(sncf: SNCF, lineData: LineData, 
 
   return {
     ...res,
-    data: resTimes,
+    data: await addDockToTrainResponse(lineData, resTimes),
   };
 }
 
