@@ -24,7 +24,7 @@ const primsData: PrimData[] = [
     departureName: 'Étampes RER',
     destinationName: 'Austerlitz RER',
     primDepartureRef: 'STIF:StopPoint:Q:41298:',
-    primJourneyNote: ['SARA'],
+    primJourneyNote: ['SARA', 'ORET'],
     primLineRef: 'STIF:Line::C01727:',
     type: 'RER',
   },
