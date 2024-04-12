@@ -7,6 +7,7 @@ import {
   fetchDataFromLinesData,
   getDateFromQuery,
   getDefaultFetchRTMethod,
+  isRTFetchType,
 } from './utils/utils';
 import {
   getDeparturesFromToRealtime,
@@ -18,6 +19,10 @@ import primsData from './conf/prim-data';
 import { getDeparturesFromPrim } from './utils/utilsPrim';
 import { Crawl } from './services/crawl-api';
 import { DeparturesResponse } from './types/Response';
+import { CrawlFlare } from './services/crawl-flare-api';
+import crawlsData from './conf/crawl-data';
+import { parseCrawlFlareDeparturesWithTitle } from './utils/utilsFlare';
+import { TrainType } from './types/CrawlFlareDeparture';
 
 dotenv.config();
 
@@ -87,8 +92,8 @@ app.get('/departures/', async (req, res) => {
   res.send(JSON.stringify(resTimes));
 });
 
-app.get('/departures/:id', async (req, res) => {
-  const { id } = req.params;
+app.get('/departures/:id/:typeFetch?', async (req, res) => {
+  const { id, typeFetch } = req.params;
   const lineData = linesData.filter((line) => line.id === Number(id))[0];
 
   if (!lineData) {
@@ -105,8 +110,10 @@ app.get('/departures/:id', async (req, res) => {
     return;
   }
 
+  const typeFetchMethod = isRTFetchType(typeFetch) ? typeFetch : getDefaultFetchRTMethod();
+
   const sncf = new SNCF(process.env.SNCF_API_URL as string, process.env.SNCF_API_KEY as string);
-  const resTimes = await fetchDataFromLineData(sncf, lineData, dateFrom, getDefaultFetchRTMethod());
+  const resTimes = await fetchDataFromLineData(sncf, lineData, dateFrom, typeFetchMethod);
 
   res.setHeader('Content-Type', 'application/json');
   res.send(JSON.stringify(resTimes));
@@ -182,6 +189,38 @@ app.get('/departuresCrawl/:id', async (req, res) => {
 
   res.setHeader('Content-Type', 'application/json');
   res.send(JSON.stringify(crawlRes));
+});
+
+app.get('/departuresCrawlFlare/:id/:type?', async (req, res) => {
+  const { id, type } = req.params;
+  const crawlData = crawlsData.filter((data) => data.id === Number(id))[0];
+
+  if (!crawlData) {
+    res.status(404);
+    res.send('Crawl data not found');
+    return;
+  }
+  if (type && !Object.values(TrainType).includes(type as TrainType)) {
+    res.status(404);
+    res.send('Train type not found');
+    return;
+  }
+
+  const crawlFlare = new CrawlFlare(
+    process.env.FLARE_API_URL as string,
+    process.env.SNCF_CRAWL_FLARE_URL as string,
+  );
+
+  const departures = await crawlFlare.getDepartures(crawlData);
+
+  const departuresRes = parseCrawlFlareDeparturesWithTitle(
+    crawlData,
+    departures,
+    type as TrainType,
+  );
+
+  res.setHeader('Content-Type', 'application/json');
+  res.send(JSON.stringify(departuresRes));
 });
 
 app.listen(port, () => {

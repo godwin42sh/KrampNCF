@@ -1,3 +1,5 @@
+import { TrainType } from './CrawlFlareDeparture';
+
 export interface LineDataFilters {
   lines?: string;
   commercial_modes?: string;
@@ -15,4 +17,6 @@ export interface LineData {
   gtfsIdTo?: string;
   primDataId: number;
   crawlUrlParam: string;
+  crawlDataId: number;
+  crawlDataTrainType: TrainType,
 }
