@@ -1,1 +1,1 @@
-export type RTFetchType = 'gtfs' | 'prim';
+export type RTFetchType = 'gtfs' | 'prim' | 'crawlFlare';

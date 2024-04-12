@@ -1,5 +1,8 @@
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 
+import crawlsData from '../conf/crawl-data';
+import { Departure } from '../types/Departure';
+import { CrawlFlare } from '../services/crawl-flare-api';
 import type { RTFetchType } from '../types/RTFetchType';
 import type { DeparturesResponse, TrainResponse } from '../types/Response';
 import type { LineData } from '../types/LineData';
@@ -12,6 +15,7 @@ import { readGtfsRT } from '../services/gtfs-api';
 import { getDeparturesTimesWithDelayFromFeed, getDeparturesTimeWithDelayFromTimeUpdates } from './utilsRT';
 import primsData from '../conf/prim-data';
 import { getDeparturesFromScheduledAndPrim } from './utilsPrim';
+import { mergeCrawlFlareWithScheduledData } from './utilsFlare';
 
 export function subtractHours(date: Date, hours: number) {
   date.setHours(date.getHours() - hours);
@@ -28,6 +32,22 @@ export async function getDateFromQuery(query: string | undefined) {
   }
 
   return dateFrom;
+}
+
+export async function addDockToTrainResponse(lineData: LineData, trainResponses: TrainResponse[]) {
+  const crawl = new Crawl(process.env.SNCF_CRAWL_URL as string);
+  const crawlRes = await crawl.getDepartures(lineData);
+
+  return trainResponses.map((train) => {
+    const crawlMatching = crawlRes.data.find((cres) => cres.trainNumber === train.trainNumber);
+
+    if (!crawlMatching?.dock) return train;
+
+    return {
+      ...train,
+      dock: crawlMatching.dock,
+    };
+  });
 }
 
 export async function fetchDataFromLineDataGTFS(sncf: SNCF, lineData: LineData, dateFrom: Date) {
@@ -63,22 +83,6 @@ export async function fetchDataFromLineDataGTFS(sncf: SNCF, lineData: LineData, 
     ...res,
     data: await addDockToTrainResponse(lineData, resTimes),
   };
-}
-
-export async function addDockToTrainResponse(lineData: LineData, trainResponses: TrainResponse[]) {
-  const crawl = new Crawl(process.env.SNCF_CRAWL_URL as string);
-  const crawlRes = await crawl.getDepartures(lineData);
-
-  return trainResponses.map((train) => {
-    const crawlMatching = crawlRes.data.find((cres) => cres.trainNumber === train.trainNumber);
-
-    if (!crawlMatching?.dock) return train;
-
-    return {
-      ...train,
-      dock: crawlMatching.dock,
-    };
-  });
 }
 
 export async function fetchDataFromLineDataPrim(
@@ -130,14 +134,89 @@ export async function fetchDataFromLineDataPrim(
   };
 }
 
+export function parseScheduledData(lineData: LineData, departures: Departure[]): TrainResponse[] {
+  return departures.map((departure) => {
+    const arrivalDate = parseISO(departure.stop_date_time.arrival_date_time);
+    const departureDate = parseISO(departure.stop_date_time.departure_date_time);
+
+    return {
+      title: lineData.destinationName,
+      arrivalTime: format(arrivalDate, 'HH:mm'),
+      departureTime: format(departureDate, 'HH:mm'),
+      trainNumber: departure.display_informations.trip_short_name,
+    };
+  });
+}
+
+export async function fetchDataFromLineDataCrawlFlare(
+  sncf: SNCF,
+  lineData: LineData,
+  dateFrom: Date,
+): Promise<DeparturesResponse> {
+  const departures = await sncf.getDepartures(lineData.stopAreaId, dateFrom, lineData.stopFilters);
+
+  const res = {
+    title: `${lineData.title} - ${format(dateFrom, 'dd/MM')}`,
+    data: [],
+    isCached: departures.isCached,
+    fetchType: 'crawlFlare' as RTFetchType,
+  };
+
+  const dateFromStr = format(dateFrom, 'yyyyMMdd');
+
+  departures.data = departures.data.filter(
+    (departure) => departure.route.direction.id === lineData.directionAreaId
+      && departure.stop_date_time.departure_date_time.startsWith(dateFromStr),
+  );
+
+  if (!departures.data.length) {
+    return res;
+  }
+
+  const crawlData = crawlsData.find((crawl) => crawl.id === lineData.crawlDataId);
+
+  if (!crawlData) {
+    return res;
+  }
+
+  const crawlFlare = new CrawlFlare(
+    process.env.FLARE_API_URL as string,
+    process.env.SNCF_CRAWL_FLARE_URL as string,
+  );
+
+  const departuresCrawl = await crawlFlare.getDepartures(crawlData);
+
+  const resTimesScheduled = parseScheduledData(lineData, departures.data);
+
+  const resTimes = mergeCrawlFlareWithScheduledData(
+    resTimesScheduled,
+    departuresCrawl.data,
+    crawlData,
+  );
+
+  return {
+    ...res,
+    data: resTimes,
+  };
+}
+
+type FunctionByType = {
+  [key in RTFetchType]:
+  (sncf: SNCF, lineData: LineData, dateFrom: Date) => Promise<DeparturesResponse>;
+};
+
 export async function fetchDataFromLineData(
   sncf: SNCF,
   lineData: LineData,
   dateFrom: Date,
-  type: 'prim' | 'gtfs',
+  type: RTFetchType,
 ): Promise<DeparturesResponse> {
-  const functionToUse = type === 'prim' ? fetchDataFromLineDataPrim : fetchDataFromLineDataGTFS;
-  return functionToUse(sncf, lineData, dateFrom);
+  const funcByType: FunctionByType = {
+    gtfs: fetchDataFromLineDataGTFS,
+    prim: fetchDataFromLineDataPrim,
+    crawlFlare: fetchDataFromLineDataCrawlFlare,
+  };
+  return funcByType[type](sncf, lineData, dateFrom);
 }
 
 export async function fetchDataFromLinesData(
@@ -159,9 +238,12 @@ export async function fetchDataFromLinesData(
   }, []);
 }
 
-export function getDefaultFetchRTMethod(): RTFetchType {
-  const allowedMethods: RTFetchType[] = ['gtfs', 'prim'];
-  const defaultMethod = process.env.DEFAULT_FETCH_RT_METHOD as RTFetchType ?? 'gtfs';
+export function isRTFetchType(type?: string): type is RTFetchType {
+  return !!type && ['gtfs', 'prim', 'crawlFlare'].includes(type);
+}
 
-  return allowedMethods.includes(defaultMethod) ? defaultMethod : 'gtfs';
+export function getDefaultFetchRTMethod(): RTFetchType {
+  const defaultMethod = process.env.DEFAULT_FETCH_RT_METHOD;
+
+  return isRTFetchType(defaultMethod) ? defaultMethod : 'crawlFlare';
 }

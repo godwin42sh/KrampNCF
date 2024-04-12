@@ -1,3 +1,4 @@
+import { TrainType } from '../types/CrawlFlareDeparture';
 import { LineData } from '../types/LineData';
 
 const linesData: LineData[] = [
@@ -16,6 +17,8 @@ const linesData: LineData[] = [
     directionAreaId: 'stop_area:IDFM:71135',
     primDataId: 1,
     crawlUrlParam: 'etampes-87545137',
+    crawlDataId: 1,
+    crawlDataTrainType: 'TER' as TrainType,
   },
   {
     id: 2,
@@ -32,6 +35,8 @@ const linesData: LineData[] = [
     directionAreaId: 'stop_area:IDFM:59403',
     primDataId: 2,
     crawlUrlParam: 'paris-austerlitz-87547000',
+    crawlDataId: 2,
+    crawlDataTrainType: 'TER' as TrainType,
   },
 ];
 
