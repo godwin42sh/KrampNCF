@@ -5,6 +5,7 @@ export type TrainResponse = {
   arrivalTime?: string;
   departureTime: string;
   delay?: number;
+  deleted?: boolean;
   raw?: any;
   trainNumber?: string;
   trainType?: string;
