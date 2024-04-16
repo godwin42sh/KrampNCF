@@ -1,4 +1,4 @@
-import { differenceInMinutes, format, parseISO } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { IsCached } from '../types/IsCached';
 import type { DeparturesResponse, TrainResponse } from '../types/Response';
 import type { CrawlFlareDeparture, TrainType } from '../types/CrawlFlareDeparture';
@@ -6,18 +6,21 @@ import type { CrawlData } from '../types/CrawlData';
 
 function parseCrawlFlareDeparture(title: string, departure: CrawlFlareDeparture): TrainResponse {
   const departureTime = parseISO(departure.actualTime);
-  const delay = differenceInMinutes(
-    parseISO(departure.scheduledTime),
-    parseISO(departure.actualTime),
-  );
+  // const delay = differenceInMinutes(
+  //   parseISO(departure.scheduledTime),
+  //   parseISO(departure.actualTime),
+  // );
+  const delay = departure.informationStatus.trainStatus === 'RETARD'
+    && departure.informationStatus.delay ? departure.informationStatus.delay : undefined;
 
   return {
     title,
     departureTime: format(departureTime, 'HH:mm'),
-    delay: delay > 0 ? delay : undefined,
+    delay,
     dock: departure.platform.track || undefined,
     trainNumber: departure.missionCode || departure.trainNumber,
     trainType: departure.trainType,
+    deleted: departure.informationStatus.trainStatus === 'SUPPRESSION_TOTALE',
   };
 }
 

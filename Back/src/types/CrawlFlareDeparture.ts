@@ -28,7 +28,7 @@ export enum Direction {
 export interface InformationStatus {
   trainStatus: TrainStatus;
   eventLevel: EventLevel;
-  delay: null;
+  delay: number | null;
 }
 
 export enum EventLevel {
@@ -37,6 +37,7 @@ export enum EventLevel {
 
 export enum TrainStatus {
   Ontime = 'Ontime',
+  RETARD = 'RETARD',
   SuppressionTotale = 'SUPPRESSION_TOTALE',
 }
 

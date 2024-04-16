@@ -11,6 +11,8 @@ type BodyFlare = {
   maxTimeout: number
 };
 
+type DataType = 'Departures' | 'Arrivals';
+
 export class CrawlFlare {
 
   private api: AxiosInstance;
@@ -19,8 +21,8 @@ export class CrawlFlare {
 
   private regexMatchJson = /(?:.*)(\[\{.*])(?:<\/pre>.*)/;
 
-  constructor(flaresolverrUrl: string, apiUrl: string) {
-    this.sncfUrl = apiUrl;
+  constructor(flaresolverrUrl: string, apiUrl: string, dataType: DataType = 'Departures') {
+    this.sncfUrl = `${apiUrl}/${dataType}`;
     this.api = axios.create({
       baseURL: flaresolverrUrl,
       headers: {
@@ -56,7 +58,6 @@ export class CrawlFlare {
     const cached = await redis.get(redisKey);
 
     if (cached) {
-      console.log('using cached result');
       return {
         isCached: true,
         data: JSON.parse(cached),
@@ -64,7 +65,7 @@ export class CrawlFlare {
     }
     else {
       let resData: CrawlFlareDeparture[] = [];
-      console.log('crawling from SNCF site with flaresolverr', body);
+      console.log('crawling from SNCF site with flaresolverr');
 
       try {
         const { data } = await this.api.post('', body);
@@ -77,6 +78,7 @@ export class CrawlFlare {
           console.log('error while crawling', e.message);
         }
       }
+
       return {
         isCached: false,
         data: resData,
