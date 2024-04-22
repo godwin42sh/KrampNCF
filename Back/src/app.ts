@@ -23,6 +23,8 @@ import { CrawlFlare } from './services/crawl-flare-api';
 import crawlsData from './conf/crawl-data';
 import { parseCrawlFlareDeparturesWithTitle } from './utils/utilsFlare';
 import { TrainType } from './types/CrawlFlareDeparture';
+import { QUERY_FORMAT, QueryType } from './types/QueryTypes';
+import formatDeparturesAwtrix from './utils/utilsAwtrix';
 
 dotenv.config();
 
@@ -72,7 +74,7 @@ app.get('/departuresRT/:id', async (req, res) => {
 });
 
 app.get('/departures/', async (req, res) => {
-  const dateFrom = await getDateFromQuery(req.query.dateFrom as string | undefined);
+  const dateFrom = getDateFromQuery(req.query.dateFrom as string | undefined);
 
   if (!dateFrom) {
     res.status(400);
@@ -102,7 +104,7 @@ app.get('/departures/:id/:typeFetch?', async (req, res) => {
     return;
   }
 
-  const dateFrom = await getDateFromQuery(req.query.dateFrom as string | undefined);
+  const dateFrom = getDateFromQuery(req.query.dateFrom as string | undefined);
 
   if (!dateFrom) {
     res.status(400);
@@ -191,9 +193,11 @@ app.get('/departuresCrawl/:id', async (req, res) => {
   res.send(JSON.stringify(crawlRes));
 });
 
-app.get('/departuresCrawlFlare/:id/:type?', async (req, res) => {
-  const { id, type } = req.params;
+app.get('/departuresCrawlFlare/:id', async (req, res) => {
+  const { id } = req.params;
+  const { type, format } = req.query;
   const crawlData = crawlsData.filter((data) => data.id === Number(id))[0];
+  const formatType: QueryType = QUERY_FORMAT.includes(format as QueryType) ? format as QueryType : 'json';
 
   if (!crawlData) {
     res.status(404);
@@ -218,6 +222,12 @@ app.get('/departuresCrawlFlare/:id/:type?', async (req, res) => {
     departures,
     type as TrainType,
   );
+
+  if (formatType === 'awtrix') {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(formatDeparturesAwtrix(departuresRes));
+    return;
+  }
 
   res.setHeader('Content-Type', 'application/json');
   res.send(JSON.stringify(departuresRes));

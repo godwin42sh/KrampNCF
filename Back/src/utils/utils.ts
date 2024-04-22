@@ -22,7 +22,7 @@ export function subtractHours(date: Date, hours: number) {
   return date;
 }
 
-export async function getDateFromQuery(query: string | undefined) {
+export function getDateFromQuery(query: string | undefined): Date | false {
   const dateFrom = query
     ? new Date(query)
     : subtractHours(new Date(), 1);
