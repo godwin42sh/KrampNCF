@@ -17,9 +17,9 @@ export default function formatDeparturesAwtrix(jsonReponsse: DeparturesResponse)
 
   let nextTrain: TrainResponse | undefined;
 
-  if (departuresNextHour.length < 0) {
+  if (departuresNextHour.length === 0) {
     // eslint-disable-next-line prefer-destructuring
-    nextTrain = departuresNextHour[0];
+    nextTrain = jsonReponsse.data[0];
   } else {
     nextTrain = departuresNextHour.find((departure) => departure.trainType === 'TER');
     nextTrain = nextTrain || departuresNextHour[0];
