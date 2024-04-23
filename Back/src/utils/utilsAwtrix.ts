@@ -25,8 +25,11 @@ export default function formatDeparturesAwtrix(jsonReponsse: DeparturesResponse)
     nextTrain = nextTrain || departuresNextHour[0];
   }
 
+  const iconTer = process.env.AWTRIX_ICON_TER as string || '59998';
+  const iconRer = process.env.AWTRIX_ICON_RER as string || '59997';
+
   const res = {
-    icon: nextTrain.trainType === 'TER' ? '59904' : '59947',
+    icon: nextTrain.trainType === 'TER' ? iconTer : iconRer,
     color: nextTrain.delay ? '#FF0000' : '#FFFFFF',
     pos: 1,
     text: nextTrain.departureTime,
