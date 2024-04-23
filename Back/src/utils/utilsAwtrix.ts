@@ -5,6 +5,9 @@ export default function formatDeparturesAwtrix(jsonReponsse: DeparturesResponse)
   const dateNow: Date = new Date();
 
   const departuresNextHour = jsonReponsse.data.filter((departure) => {
+    if (departure.deleted === true) {
+      return false;
+    }
     const tmpDate = new Date();
     const departureHour: string = departure.departureTime.split(':')[0];
 
