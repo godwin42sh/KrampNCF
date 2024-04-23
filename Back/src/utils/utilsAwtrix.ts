@@ -29,7 +29,6 @@ export default function formatDeparturesAwtrix(jsonReponsse: DeparturesResponse)
     icon: nextTrain.trainType === 'TER' ? '59904' : '59947',
     color: nextTrain.delay ? '#FF0000' : '#FFFFFF',
     pos: 1,
-    duration: 30,
     text: nextTrain.departureTime,
   };
 
