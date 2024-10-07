@@ -1,7 +1,14 @@
 import { differenceInMinutes } from 'date-fns';
 import { DeparturesResponse, TrainResponse } from '../types/Response';
 
-export default function formatDeparturesAwtrix(jsonReponsse: DeparturesResponse): string {
+export type AwtrixResponse = {
+  icon: string;
+  color: string;
+  pos: number;
+  text: string;
+};
+
+export default function formatDeparturesAwtrix(jsonReponsse: DeparturesResponse): AwtrixResponse {
   const dateNow: Date = new Date();
 
   const departuresNextHour = jsonReponsse.data.filter((departure) => {
@@ -38,5 +45,5 @@ export default function formatDeparturesAwtrix(jsonReponsse: DeparturesResponse)
     text: nextTrain.departureTime,
   };
 
-  return JSON.stringify(res);
+  return res;
 }

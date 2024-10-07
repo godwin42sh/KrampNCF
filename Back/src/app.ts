@@ -24,7 +24,7 @@ import crawlsData from './conf/crawl-data';
 import { parseCrawlFlareDeparturesWithTitle } from './utils/utilsFlare';
 import { TrainType } from './types/CrawlFlareDeparture';
 import { QUERY_FORMAT, QueryType } from './types/QueryTypes';
-import formatDeparturesAwtrix from './utils/utilsAwtrix';
+import formatDeparturesAwtrix, { AwtrixResponse } from './utils/utilsAwtrix';
 
 dotenv.config();
 
@@ -225,12 +225,55 @@ app.get('/departuresCrawlFlare/:id', async (req, res) => {
 
   if (formatType === 'awtrix') {
     res.setHeader('Content-Type', 'application/json');
-    res.send(formatDeparturesAwtrix(departuresRes));
+    res.send(JSON.stringify(formatDeparturesAwtrix(departuresRes)));
     return;
   }
 
   res.setHeader('Content-Type', 'application/json');
   res.send(JSON.stringify(departuresRes));
+});
+
+app.get('/departuresCrawlFlare', async (req, res) => {
+  const { type, format } = req.query;
+  const formatType: QueryType = QUERY_FORMAT.includes(format as QueryType) ? format as QueryType : 'json';
+
+  if (type && !Object.values(TrainType).includes(type as TrainType)) {
+    res.status(404);
+    res.send('Train type not found');
+    return;
+  }
+
+  const finalRes = await Promise.all(
+    crawlsData.map(async (crawlData): Promise<DeparturesResponse | AwtrixResponse> => {
+      const crawlFlare = new CrawlFlare(
+        process.env.FLARE_API_URL as string,
+        process.env.SNCF_CRAWL_FLARE_URL as string,
+      );
+
+      const departures = await crawlFlare.getDepartures(crawlData);
+
+      const departuresRes = parseCrawlFlareDeparturesWithTitle(
+        crawlData,
+        departures,
+        type as TrainType,
+      );
+
+      if (formatType === 'awtrix') {
+        return formatDeparturesAwtrix(departuresRes);
+      }
+
+      return departuresRes;
+    }),
+  );
+
+  if (!finalRes.length) {
+    res.status(404);
+    res.send('Crawl data not found');
+    return;
+  }
+
+  res.setHeader('Content-Type', 'application/json');
+  res.send(JSON.stringify(finalRes));
 });
 
 app.listen(port, () => {
