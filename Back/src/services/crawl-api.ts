@@ -86,8 +86,9 @@ export class Crawl {
   async getDepartures(lineData: LineData): Promise<IsCached<CrawlRes[]>> {
 
     const redis = new Redis((process.env.REDIS_URL as string));
+    const cacheTime = process.env.REDIS_CRAWL_EXPIRE ? parseInt(process.env.REDIS_CRAWL_EXPIRE) : 300;
 
-    const url = '/'+lineData.crawlUrlParam;
+    const url = '/' + lineData.crawlUrlParam;
     const redisKey = url;
 
     const cached = await redis.get(redisKey);
@@ -107,7 +108,7 @@ export class Crawl {
         const { data } = await this.api.get(url);
 
         resData = this.parseDeparturesFromHtml(data);
-        redis.set(redisKey, JSON.stringify(resData), 'EX', 120);
+        redis.set(redisKey, JSON.stringify(resData), 'EX', cacheTime);
       }
       catch (e) {
         // console.log(e);

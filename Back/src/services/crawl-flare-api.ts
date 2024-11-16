@@ -56,6 +56,7 @@ export class CrawlFlare {
     const redisKey = body.url;
 
     const cached = await redis.get(redisKey);
+    const cacheTime = process.env.REDIS_CRAWL_EXPIRE ? parseInt(process.env.REDIS_CRAWL_EXPIRE) : 300;
 
     if (cached) {
       return {
@@ -71,7 +72,7 @@ export class CrawlFlare {
         const { data } = await this.api.post('', body);
 
         resData = this.getJsonFromHtml(data.solution.response);
-        redis.set(redisKey, JSON.stringify(resData), 'EX', 120);
+        redis.set(redisKey, JSON.stringify(resData), 'EX', cacheTime);
       }
       catch (e) {
         if (axios.isAxiosError(e)) {
