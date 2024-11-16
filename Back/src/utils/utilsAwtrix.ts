@@ -11,6 +11,18 @@ export type AwtrixResponse = {
 export default function formatDeparturesAwtrix(jsonReponsse: DeparturesResponse): AwtrixResponse {
   const dateNow: Date = new Date();
 
+  const iconTer = process.env.AWTRIX_ICON_TER as string || '59998';
+  const iconRer = process.env.AWTRIX_ICON_RER as string || '59997';
+
+  if (!jsonReponsse.data) {
+    return {
+      icon: iconTer,
+      color: '#FF0000',
+      pos: 1,
+      text: 'No trains',
+    };
+  }
+
   const departuresNextHour = jsonReponsse.data.filter((departure) => {
     if (departure.deleted === true) {
       return false;
@@ -34,9 +46,6 @@ export default function formatDeparturesAwtrix(jsonReponsse: DeparturesResponse)
     nextTrain = departuresNextHour.find((departure) => departure.trainType === 'TER');
     nextTrain = nextTrain || departuresNextHour[0];
   }
-
-  const iconTer = process.env.AWTRIX_ICON_TER as string || '59998';
-  const iconRer = process.env.AWTRIX_ICON_RER as string || '59997';
 
   const res = {
     icon: nextTrain.trainType === 'TER' ? iconTer : iconRer,
