@@ -4,47 +4,19 @@ import type GtfsRealtimeBindings from 'gtfs-realtime-bindings';
 
 import type { Departure } from '../types/Departure';
 import type { LineData } from '../types/LineData';
-import type { TrainResponse } from '../types/Response';
+import type { DeparturesResponse, TrainResponse } from '../types/Response';
 import type { TrainTimeEvent } from '../types/ResponseRT';
 
 import { readGtfsRT } from '../services/gtfs-api';
 
-function buildDateObject(
-  stopTimeEvent: GtfsRealtimeBindings.transit_realtime.TripUpdate.IStopTimeEvent,
-) {
-  let eventObject: TrainTimeEvent = {
-    time: formatInTimeZone(new Date(stopTimeEvent.time as number * 1000), 'Europe/Paris', 'HH:mm'),
-  };
-
-  if (stopTimeEvent.delay) {
-    eventObject = {
-      ...eventObject,
-      delay: stopTimeEvent.delay / 60,
-      scheduledTime:
-      formatInTimeZone(
-        new Date(
-          (stopTimeEvent.time as number) * 1000 - (stopTimeEvent.delay * 1000),
-        ),
-        'Europe/Paris',
-        'HH:mm',
-      ),
-    };
-  }
-
-  return eventObject;
-}
-
-function calcDatesFromStopTimeUpdate(
-  stopTimeUpdate: GtfsRealtimeBindings.transit_realtime.TripUpdate.IStopTimeUpdate,
-) {
-  const arrivalObject = stopTimeUpdate.arrival
-    ? { arrival: buildDateObject(stopTimeUpdate.arrival) } : {};
-  const departureObject = stopTimeUpdate.departure
-    ? { departure: buildDateObject(stopTimeUpdate.departure) } : {};
-
+function formatStopTimeEvent(
+  departureStopTimeEvent: GtfsRealtimeBindings.transit_realtime.TripUpdate.IStopTimeEvent,
+  arrivalStopTimeEvent?: GtfsRealtimeBindings.transit_realtime.TripUpdate.IStopTimeEvent | null,
+): Omit<TrainResponse, 'title'> {
   return {
-    ...arrivalObject,
-    ...departureObject,
+    arrivalTime: arrivalStopTimeEvent ? formatInTimeZone(new Date(arrivalStopTimeEvent.time as number * 1000), 'Europe/Paris', 'HH:mm') : undefined,
+    departureTime: formatInTimeZone(new Date(departureStopTimeEvent.time as number * 1000), 'Europe/Paris', 'HH:mm'),
+    delay: departureStopTimeEvent.delay ? departureStopTimeEvent.delay / 60 : undefined,
   };
 }
 
@@ -52,25 +24,25 @@ export async function getDeparturesFromToRealtime(
   lineFrom: LineData,
   lineTo: LineData,
   feedInit?: [GtfsRealtimeBindings.transit_realtime.FeedMessage, boolean],
-) {
+): Promise<DeparturesResponse> {
   const [feed, isCached] = feedInit || await readGtfsRT();
 
-  const res: any[] = [];
+  const res: TrainResponse[] = [];
 
   feed.entity.forEach((entity) => {
     if (entity.tripUpdate) {
       let fromStopTimeUpdate:
-      GtfsRealtimeBindings.transit_realtime.TripUpdate.IStopTimeUpdate
-      | undefined;
+        GtfsRealtimeBindings.transit_realtime.TripUpdate.IStopTimeUpdate
+        | undefined;
 
       entity.tripUpdate.stopTimeUpdate?.forEach((stopTimeUpdate) => {
         if (!fromStopTimeUpdate && stopTimeUpdate.stopId?.includes(lineFrom.gtfsId)) {
           fromStopTimeUpdate = stopTimeUpdate;
-        } else if (fromStopTimeUpdate && stopTimeUpdate.stopId?.includes(lineTo.gtfsId)) {
+        } else if (fromStopTimeUpdate && stopTimeUpdate.stopId?.includes(lineTo.gtfsId) && fromStopTimeUpdate.departure) {
           res.push(
             {
-              ...{ title: lineTo.title },
-              ...calcDatesFromStopTimeUpdate(fromStopTimeUpdate),
+              title: lineTo.title,
+              ...formatStopTimeEvent(fromStopTimeUpdate.departure, fromStopTimeUpdate.arrival),
             },
           );
         }
@@ -82,13 +54,14 @@ export async function getDeparturesFromToRealtime(
     title: `${lineFrom.title} - ${format(new Date(), 'dd/MM')}`,
     data: res,
     isCached,
+    fetchType: 'gtfs',
   };
 }
 
 export async function getDeparturesFromLineDataRealtime(
   lineData: LineData,
   feedInit?: [GtfsRealtimeBindings.transit_realtime.FeedMessage, boolean],
-) {
+): Promise<DeparturesResponse> {
   const [feed, isCached] = feedInit || await readGtfsRT();
 
   const res: any[] = [];
@@ -96,11 +69,11 @@ export async function getDeparturesFromLineDataRealtime(
   feed.entity.forEach((entity) => {
     if (entity.tripUpdate) {
       entity.tripUpdate.stopTimeUpdate?.forEach((stopTimeUpdate) => {
-        if (stopTimeUpdate.stopId?.includes(lineData.gtfsId)) {
+        if (stopTimeUpdate.stopId?.includes(lineData.gtfsId) && stopTimeUpdate.departure) {
           res.push(
             {
-              ...{ title: lineData.title },
-              ...calcDatesFromStopTimeUpdate(stopTimeUpdate),
+              title: lineData.title,
+              ...formatStopTimeEvent(stopTimeUpdate.departure, stopTimeUpdate.arrival),
             },
           );
         }
@@ -112,6 +85,7 @@ export async function getDeparturesFromLineDataRealtime(
     title: `${lineData.title} - ${format(new Date(), 'dd/MM')}`,
     data: res,
     isCached,
+    fetchType: 'gtfs',
   };
 }
 

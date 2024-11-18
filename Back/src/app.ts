@@ -18,7 +18,7 @@ import { readGtfsRT } from './services/gtfs-api';
 import primsData from './conf/prim-data';
 import { getDeparturesFromPrim } from './utils/utilsPrim';
 import { Crawl } from './services/crawl-api';
-import { DeparturesResponse } from './types/Response';
+import { DeparturesResponse, TrainResponse } from './types/Response';
 import { CrawlFlare } from './services/crawl-flare-api';
 import crawlsData from './conf/crawl-data';
 import { parseCrawlFlareDeparturesWithTitle } from './utils/utilsFlare';
@@ -47,7 +47,7 @@ app.get('/departuresRT', async (req, res) => {
 
 app.get('/departuresRT/:id', async (req, res) => {
   const { id } = req.params;
-  const lineData = linesData.filter((line) => line.id === Number(id))[0];
+  const lineData = linesData.find((line) => line.id === Number(id));
 
   if (!lineData || !lineData.gtfsId) {
     res.status(404);
@@ -57,9 +57,10 @@ app.get('/departuresRT/:id', async (req, res) => {
 
   let departures: {
     title: string;
-    data: any[];
+    data: TrainResponse[];
     isCached: boolean;
   };
+
   const feed = await readGtfsRT();
 
   if (lineData.gtfsIdTo) {
@@ -123,7 +124,9 @@ app.get('/departures/:id/:typeFetch?', async (req, res) => {
 
 app.get('/departuresPrim/:id', async (req, res) => {
   const { id } = req.params;
+  const { format } = req.query;
   const primData = primsData.find((line) => line.id === Number(id));
+  const formatType: QueryType = QUERY_FORMAT.includes(format as QueryType) ? format as QueryType : 'json';
 
   if (!primData) {
     res.status(404);
@@ -136,6 +139,12 @@ app.get('/departuresPrim/:id', async (req, res) => {
   if (departuresRes === false) {
     res.status(404);
     res.send();
+    return;
+  }
+
+  if (formatType === 'awtrix') {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify(formatDeparturesAwtrix(departuresRes)));
     return;
   }
 

@@ -12,7 +12,6 @@ export class Prim {
   private api: AxiosInstance;
 
   constructor(apiUrl: string, apiKey: string) {
-    console.log('prim api url', apiUrl);
     this.api = axios.create({
       baseURL: apiUrl,
       headers: {
@@ -53,6 +52,7 @@ export class Prim {
 
       try {
         const { data } = await this.api.get<PrimSNCF>(url);
+
         resData = data.Siri.ServiceDelivery.StopMonitoringDelivery;
         redis.set(redisKey, JSON.stringify(resData), 'EX', 120);
       }

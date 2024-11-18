@@ -2,8 +2,7 @@ import axios from 'axios';
 import Redis from 'ioredis';
 import GtfsRealtimeBindings from 'gtfs-realtime-bindings';
 
-export async function readGtfsRT():
-Promise<[GtfsRealtimeBindings.transit_realtime.FeedMessage, boolean]> {
+export async function readGtfsRT(): Promise<[GtfsRealtimeBindings.transit_realtime.FeedMessage, boolean]> {
   const redis = new Redis((process.env.REDIS_URL as string));
 
   const cached = await redis.get('gtfsRT');
