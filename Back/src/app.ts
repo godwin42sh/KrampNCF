@@ -31,6 +31,12 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 80;
 
+// we add global middleware to log all url called
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
 app.get('/departuresRT', async (req, res) => {
   const feed = await readGtfsRT();
   const departuresFrom = await getDeparturesFromToRealtime(linesData[0], linesData[1], feed);
