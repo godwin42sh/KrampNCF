@@ -8,13 +8,13 @@ export type AwtrixResponse = {
   text: string;
 };
 
-export default function formatDeparturesAwtrix(jsonReponsse: DeparturesResponse): AwtrixResponse {
+export default function formatDeparturesAwtrix(jsonReponse: DeparturesResponse): AwtrixResponse {
   const dateNow: Date = new Date();
 
   const iconTer = process.env.AWTRIX_ICON_TER as string || '59998';
   const iconRer = process.env.AWTRIX_ICON_RER as string || '59997';
 
-  if (!jsonReponsse.data) {
+  if (!jsonReponse.data?.length) {
     return {
       icon: iconTer,
       color: '#FF0000',
@@ -23,7 +23,7 @@ export default function formatDeparturesAwtrix(jsonReponsse: DeparturesResponse)
     };
   }
 
-  const departuresNextHour = jsonReponsse.data.filter((departure) => {
+  const departuresNextHour = jsonReponse.data.filter((departure) => {
     if (departure.deleted === true) {
       return false;
     }
@@ -41,7 +41,7 @@ export default function formatDeparturesAwtrix(jsonReponsse: DeparturesResponse)
 
   if (departuresNextHour.length === 0) {
     // eslint-disable-next-line prefer-destructuring
-    nextTrain = jsonReponsse.data[0];
+    nextTrain = jsonReponse.data[0];
   } else {
     nextTrain = departuresNextHour.find((departure) => departure.trainType === 'TER');
     nextTrain = nextTrain || departuresNextHour[0];
