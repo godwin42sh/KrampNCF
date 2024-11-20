@@ -27,7 +27,16 @@ export async function getDeparturesFromToRealtime(
 ): Promise<DeparturesResponse> {
   const [feed, isCached] = feedInit || await readGtfsRT();
 
-  const res: TrainResponse[] = [];
+  const res: DeparturesResponse = {
+    title: `${lineFrom.title} - ${lineTo.title} - ${format(new Date(), 'dd/MM')}`,
+    data: [],
+    isCached,
+    fetchType: 'gtfs',
+  };
+
+  if (!feed.entity) {
+    return res;
+  }
 
   feed.entity.forEach((entity) => {
     if (entity.tripUpdate) {
@@ -39,7 +48,7 @@ export async function getDeparturesFromToRealtime(
         if (!fromStopTimeUpdate && stopTimeUpdate.stopId?.includes(lineFrom.gtfsId)) {
           fromStopTimeUpdate = stopTimeUpdate;
         } else if (fromStopTimeUpdate && stopTimeUpdate.stopId?.includes(lineTo.gtfsId) && fromStopTimeUpdate.departure) {
-          res.push(
+          res.data.push(
             {
               title: lineTo.title,
               ...formatStopTimeEvent(fromStopTimeUpdate.departure, fromStopTimeUpdate.arrival),
@@ -50,12 +59,7 @@ export async function getDeparturesFromToRealtime(
     }
   });
 
-  return {
-    title: `${lineFrom.title} - ${format(new Date(), 'dd/MM')}`,
-    data: res,
-    isCached,
-    fetchType: 'gtfs',
-  };
+  return res;
 }
 
 export async function getDeparturesFromLineDataRealtime(
