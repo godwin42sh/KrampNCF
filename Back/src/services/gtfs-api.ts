@@ -1,8 +1,9 @@
 import axios from 'axios';
 import Redis from 'ioredis';
 import GtfsRealtimeBindings from 'gtfs-realtime-bindings';
+import { ca } from 'date-fns/locale';
 
-export async function readGtfsRT(): Promise<[GtfsRealtimeBindings.transit_realtime.FeedMessage, boolean]> {
+export async function readGtfsRT(): Promise<[GtfsRealtimeBindings.transit_realtime.FeedMessage, boolean] | false> {
   const redis = new Redis((process.env.REDIS_URL as string));
 
   const cached = await redis.get('gtfsRT');
@@ -20,16 +21,22 @@ export async function readGtfsRT(): Promise<[GtfsRealtimeBindings.transit_realti
     encoding: null,
   };
 
-  const req = await axios.get(requestSettings.url, { responseType: 'arraybuffer' });
+  try {
+    const req = await axios.get(requestSettings.url, { responseType: 'arraybuffer' });
 
-  const feed = await GtfsRealtimeBindings.transit_realtime.FeedMessage.decode(req.data);
+    const feed = await GtfsRealtimeBindings.transit_realtime.FeedMessage.decode(req.data);
 
-  redis.set('gtfsRT', JSON.stringify(feed), 'EX', 60);
+    redis.set('gtfsRT', JSON.stringify(feed), 'EX', 60);
 
-  return [
-    feed,
-    false,
-  ];
+    return [
+      feed,
+      false,
+    ];
+  }
+  catch (e) {
+    console.error(e);
+    return false;
+  }
 }
 
 export default readGtfsRT;

@@ -25,14 +25,22 @@ export async function getDeparturesFromToRealtime(
   lineTo: LineData,
   feedInit?: [GtfsRealtimeBindings.transit_realtime.FeedMessage, boolean],
 ): Promise<DeparturesResponse> {
-  const [feed, isCached] = feedInit || await readGtfsRT();
+  const feedRaw = feedInit || await readGtfsRT();
 
   const res: DeparturesResponse = {
     title: `${lineFrom.title} - ${lineTo.title} - ${format(new Date(), 'dd/MM')}`,
     data: [],
-    isCached,
+    isCached: false,
     fetchType: 'gtfs',
   };
+
+  if (!feedRaw) {
+    return res;
+  }
+
+  const [feed, isCached] = feedRaw;
+
+  res.isCached = isCached;
 
   if (!feed.entity) {
     return res;
@@ -66,7 +74,18 @@ export async function getDeparturesFromLineDataRealtime(
   lineData: LineData,
   feedInit?: [GtfsRealtimeBindings.transit_realtime.FeedMessage, boolean],
 ): Promise<DeparturesResponse> {
-  const [feed, isCached] = feedInit || await readGtfsRT();
+  const feedRaw = feedInit || await readGtfsRT();
+
+  if (!feedRaw) {
+    return {
+      title: `${lineData.title} - ${format(new Date(), 'dd/MM')}`,
+      data: [],
+      isCached: false,
+      fetchType: 'gtfs',
+    };
+  }
+
+  const [feed, isCached] = feedRaw;
 
   const res: any[] = [];
 

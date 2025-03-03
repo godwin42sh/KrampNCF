@@ -71,7 +71,13 @@ export async function fetchDataFromLineDataGTFS(sncf: SNCF, lineData: LineData, 
     return res;
   }
 
-  const [feed] = await readGtfsRT();
+  const feedRaw = await readGtfsRT();
+
+  if (!feedRaw) {
+    return res;
+  }
+
+  const [feed] = feedRaw;
 
   const tripsDelayed = getDeparturesTimesWithDelayFromFeed(feed, lineData.gtfsId);
 
