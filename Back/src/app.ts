@@ -38,24 +38,31 @@ app.use((req, res, next) => {
 });
 
 app.get('/departuresRT', async (req, res) => {
-  const feed = await readGtfsRT();
+  try {
+    const feed = await readGtfsRT();
 
-  if (!feed) {
+    if (!feed) {
+      res.status(503);
+      res.send('Error while fetching GTFS RT');
+      return;
+    }
+
+    const departuresFrom = await getDeparturesFromToRealtime(linesData[0], linesData[1], feed);
+    const departuresTo = await getDeparturesFromToRealtime(linesData[1], linesData[0], feed);
+
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify(
+      [
+        departuresFrom,
+        departuresTo,
+      ],
+    ));
+  } catch (e) {
     res.status(503);
     res.send('Error while fetching GTFS RT');
+    console.error(e);
     return;
   }
-
-  const departuresFrom = await getDeparturesFromToRealtime(linesData[0], linesData[1], feed);
-  const departuresTo = await getDeparturesFromToRealtime(linesData[1], linesData[0], feed);
-
-  res.setHeader('Content-Type', 'application/json');
-  res.send(JSON.stringify(
-    [
-      departuresFrom,
-      departuresTo,
-    ],
-  ));
 });
 
 app.get('/departuresRT/:id', async (req, res) => {
