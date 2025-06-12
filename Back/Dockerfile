@@ -1,15 +1,16 @@
-FROM node:lts-alpine
+# Use Bun's official image
+FROM oven/bun:latest
 
-WORKDIR /home/node/app
+WORKDIR /home/bun/app
 
-COPY package*.json ./
-RUN npm install
+COPY package.json bun.lockb* ./
+RUN bun install
 
 COPY ./src ./src
 COPY tsconfig.json ./
 
-RUN npm run build
+RUN bun run tsc
 
 ENV TZ="Europe/Paris"
 
-CMD [ "npm", "run", "start" ]
+CMD ["bun", "run", "start"]
