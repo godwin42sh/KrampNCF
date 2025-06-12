@@ -1,28 +1,23 @@
 import { stringifyUrl } from "query-string";
-import axios, { AxiosInstance } from "axios";
-import { format } from "date-fns";
 import Redis from "ioredis";
-
 import type { IsCached } from "../types/IsCached";
 import { PrimData } from "../types/PrimData";
 import { PrimSNCF, StopMonitoringDelivery } from "../types/PrimSNCF";
 
 export class Prim {
-
-  private api: AxiosInstance;
+  private baseUrl: string;
+  private headers: Record<string, string>;
 
   constructor(apiUrl: string, apiKey: string) {
-    this.api = axios.create({
-      baseURL: apiUrl,
-      headers: {
-        apikey: apiKey,
-      },
-    });
+    this.baseUrl = apiUrl.endsWith("/") ? apiUrl : apiUrl + "/";
+    this.headers = {
+      apikey: apiKey,
+    };
   }
 
   makeUrlFromPrimData(primData: PrimData): string {
     return stringifyUrl({
-      url: 'stop-monitoring',
+      url: this.baseUrl + "stop-monitoring",
       query: {
         MonitoringRef: primData.primDepartureRef,
         LineRef: primData.primLineRef,
@@ -30,9 +25,10 @@ export class Prim {
     });
   }
 
-  async getDepartures(primData: PrimData): Promise<IsCached<StopMonitoringDelivery[]>> {
-
-    const redis = new Redis((process.env.REDIS_URL as string));
+  async getDepartures(
+    primData: PrimData,
+  ): Promise<IsCached<StopMonitoringDelivery[]>> {
+    const redis = new Redis(process.env.REDIS_URL as string);
 
     const url = this.makeUrlFromPrimData(primData);
     const redisKey = url;
@@ -40,23 +36,23 @@ export class Prim {
     const cached = await redis.get(redisKey);
 
     if (cached) {
-      console.log('using cached result');
+      console.log("using cached result");
       return {
         isCached: true,
         data: JSON.parse(cached),
       };
-    }
-    else {
+    } else {
       let resData: StopMonitoringDelivery[] = [];
-      console.log('fething from SNCF API', url);
+      console.log("fething from SNCF API", url);
 
       try {
-        const { data } = await this.api.get<PrimSNCF>(url);
+        const res = await fetch(url, { headers: this.headers });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data: PrimSNCF = await res.json();
 
         resData = data.Siri.ServiceDelivery.StopMonitoringDelivery;
-        redis.set(redisKey, JSON.stringify(resData), 'EX', 120);
-      }
-      catch (e) {
+        redis.set(redisKey, JSON.stringify(resData), "EX", 120);
+      } catch (e) {
         console.log(e);
       }
       return {

@@ -1,4 +1,3 @@
-import axios, { AxiosInstance } from "axios";
 import Redis from "ioredis";
 
 import type { IsCached } from "../types/IsCached";
@@ -14,24 +13,20 @@ type BodyFlare = {
 type DataType = "Departures" | "Arrivals";
 
 export class CrawlFlare {
-  private api: AxiosInstance;
-
+  private flaresolverrUrl: string;
   private sncfUrl: string;
-
-  private regexMatchJson = /(?:.*)(\[\{.*])(?:<\/pre>.*)/;
+  private headers: Record<string, string>;
 
   constructor(
     flaresolverrUrl: string,
     apiUrl: string,
     dataType: DataType = "Departures",
   ) {
+    this.flaresolverrUrl = flaresolverrUrl;
     this.sncfUrl = `${apiUrl}/${dataType}`;
-    this.api = axios.create({
-      baseURL: flaresolverrUrl,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    this.headers = {
+      "Content-Type": "application/json",
+    };
   }
 
   private makeBody(stationId: string): BodyFlare {
@@ -49,11 +44,11 @@ export class CrawlFlare {
 
     const body = this.makeBody(crawlData.flareId);
     const redisKey = body.url;
-
-    const cached = await redis.get(redisKey);
     const cacheTime = process.env.REDIS_CRAWL_EXPIRE
       ? parseInt(process.env.REDIS_CRAWL_EXPIRE)
       : 300;
+
+    const cached = await redis.get(redisKey);
 
     if (cached) {
       return {
@@ -65,13 +60,22 @@ export class CrawlFlare {
       console.log("crawling from SNCF site with flaresolverr");
 
       try {
-        const { data } = await this.api.post("", body);
+        const res = await fetch(this.flaresolverrUrl, {
+          method: "POST",
+          headers: this.headers,
+          body: JSON.stringify(body),
+        });
 
-        const resData = data.solution.response;
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
+        const data = await res.json();
+        resData = data.solution.response;
         redis.set(redisKey, JSON.stringify(resData), "EX", cacheTime);
-      } catch (e) {
+      } catch (e: any) {
         console.log("error", e);
-        if (axios.isAxiosError(e)) {
+        if (e instanceof Error) {
           console.log("error while crawling", e.message);
         }
       }
