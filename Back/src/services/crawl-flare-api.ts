@@ -16,17 +16,30 @@ export class CrawlFlare {
   private flaresolverrUrl: string;
   private sncfUrl: string;
   private headers: Record<string, string>;
+  private regexMatchJson = /(?:.*)(\[\{.*])(?:<\/pre>.*)/;
 
   constructor(
     flaresolverrUrl: string,
     apiUrl: string,
-    dataType: DataType = "Departures",
+    dataType: DataType = "Departures"
   ) {
     this.flaresolverrUrl = flaresolverrUrl;
     this.sncfUrl = `${apiUrl}/${dataType}`;
     this.headers = {
       "Content-Type": "application/json",
     };
+  }
+
+  private getJsonFromHtml(html: string): CrawlFlareDeparture[] {
+    const match = html.match(this.regexMatchJson);
+
+    if (match) {
+      const parsed = JSON.parse(match[1]) as CrawlFlareDeparture[];
+
+      return parsed;
+    }
+
+    return [];
   }
 
   private makeBody(stationId: string): BodyFlare {
@@ -38,7 +51,7 @@ export class CrawlFlare {
   }
 
   async getDepartures(
-    crawlData: CrawlData,
+    crawlData: CrawlData
   ): Promise<IsCached<CrawlFlareDeparture[]>> {
     const redis = new Redis(process.env.REDIS_URL as string);
 
@@ -71,7 +84,8 @@ export class CrawlFlare {
         }
 
         const data = await res.json();
-        resData = data.solution.response;
+        resData = this.getJsonFromHtml(data.solution.response);
+
         redis.set(redisKey, JSON.stringify(resData), "EX", cacheTime);
       } catch (e: any) {
         console.log("error", e);
