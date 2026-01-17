@@ -21,7 +21,7 @@ export class CrawlFlare {
   constructor(
     flaresolverrUrl: string,
     apiUrl: string,
-    dataType: DataType = "Departures"
+    dataType: DataType = "Departures",
   ) {
     this.flaresolverrUrl = flaresolverrUrl;
     this.sncfUrl = `${apiUrl}/${dataType}`;
@@ -51,7 +51,7 @@ export class CrawlFlare {
   }
 
   async getDepartures(
-    crawlData: CrawlData
+    crawlData: CrawlData,
   ): Promise<IsCached<CrawlFlareDeparture[]>> {
     const redis = new Redis(process.env.REDIS_URL as string);
 

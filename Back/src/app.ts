@@ -50,12 +50,12 @@ app.get("/departuresRT", async (req, res) => {
     const departuresFrom = await getDeparturesFromToRealtime(
       linesData[0],
       linesData[1],
-      feed
+      feed,
     );
     const departuresTo = await getDeparturesFromToRealtime(
       linesData[1],
       linesData[0],
-      feed
+      feed,
     );
 
     res.setHeader("Content-Type", "application/json");
@@ -94,7 +94,7 @@ app.get("/departuresRT/:id", async (req, res) => {
 
   if (lineData.gtfsIdTo) {
     const lineDataTo = linesData.filter(
-      (line) => line.gtfsId === lineData.gtfsIdTo
+      (line) => line.gtfsId === lineData.gtfsIdTo,
     )[0];
     departures = await getDeparturesFromToRealtime(lineData, lineDataTo, feed);
   } else {
@@ -116,13 +116,13 @@ app.get("/departures/", async (req, res) => {
 
   const sncf = new SNCF(
     process.env.SNCF_API_URL as string,
-    process.env.SNCF_API_KEY as string
+    process.env.SNCF_API_KEY as string,
   );
   const resTimes = await fetchDataFromLinesData(
     sncf,
     linesData,
     dateFrom,
-    getDefaultFetchRTMethod()
+    getDefaultFetchRTMethod(),
   );
 
   res.setHeader("Content-Type", "application/json");
@@ -153,13 +153,13 @@ app.get("/departures/:id/:typeFetch?", async (req, res) => {
 
   const sncf = new SNCF(
     process.env.SNCF_API_URL as string,
-    process.env.SNCF_API_KEY as string
+    process.env.SNCF_API_KEY as string,
   );
   const resTimes = await fetchDataFromLineData(
     sncf,
     lineData,
     dateFrom,
-    typeFetchMethod
+    typeFetchMethod,
   );
 
   res.setHeader("Content-Type", "application/json");
@@ -209,7 +209,7 @@ app.get("/departuresPrimByType/:type", async (req, res) => {
   }
 
   const settledRes = await Promise.allSettled(
-    primData.map(async (prim) => getDeparturesFromPrim(prim))
+    primData.map(async (prim) => getDeparturesFromPrim(prim)),
   );
 
   const departuresRes = settledRes.reduce(
@@ -220,7 +220,7 @@ app.get("/departuresPrimByType/:type", async (req, res) => {
 
       return acc;
     },
-    []
+    [],
   );
 
   if (!departuresRes.length) {
@@ -272,17 +272,15 @@ app.get("/departuresCrawlFlare/:id", async (req, res) => {
 
   const crawlFlare = new CrawlFlare(
     process.env.FLARE_API_URL as string,
-    process.env.SNCF_CRAWL_FLARE_URL as string
+    process.env.SNCF_CRAWL_FLARE_URL as string,
   );
 
   const departures = await crawlFlare.getDepartures(crawlData);
 
-  console.log("departures", departures, crawlData);
-
   const departuresRes = parseCrawlFlareDeparturesWithTitle(
     crawlData,
     departures,
-    type as TrainType
+    type as TrainType,
   );
 
   if (formatType === "awtrix") {
@@ -312,7 +310,7 @@ app.get("/departuresCrawlFlare", async (req, res) => {
       async (crawlData): Promise<DeparturesResponse | AwtrixResponse> => {
         const crawlFlare = new CrawlFlare(
           process.env.FLARE_API_URL as string,
-          process.env.SNCF_CRAWL_FLARE_URL as string
+          process.env.SNCF_CRAWL_FLARE_URL as string,
         );
 
         const departures = await crawlFlare.getDepartures(crawlData);
@@ -320,7 +318,7 @@ app.get("/departuresCrawlFlare", async (req, res) => {
         const departuresRes = parseCrawlFlareDeparturesWithTitle(
           crawlData,
           departures,
-          type as TrainType
+          type as TrainType,
         );
 
         if (formatType === "awtrix") {
@@ -328,8 +326,8 @@ app.get("/departuresCrawlFlare", async (req, res) => {
         }
 
         return departuresRes;
-      }
-    )
+      },
+    ),
   );
 
   if (!finalRes.length) {

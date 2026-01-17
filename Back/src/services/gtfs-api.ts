@@ -24,7 +24,6 @@ export async function readGtfsRT(): Promise<
     }
     const arrayBuffer = await res.arrayBuffer();
 
-    // @ts-ignore
     const feed = await GtfsRealtimeBindings.transit_realtime.FeedMessage.decode(
       new Uint8Array(arrayBuffer),
     );

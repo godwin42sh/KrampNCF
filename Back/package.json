@@ -6,7 +6,7 @@
   "scripts": {
     "start": "bun run dist/app.js",
     "build": "bun run tsc",
-    "dev": "bun src/app.ts",
+    "dev": "bun --watch src/app.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",

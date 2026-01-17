@@ -9,7 +9,7 @@ import type { CrawlData } from "../types/CrawlData";
 
 function parseCrawlFlareDeparture(
   title: string,
-  departure: CrawlFlareDeparture
+  departure: CrawlFlareDeparture,
 ): TrainResponse {
   const departureTime = parseISO(departure.actualTime);
   // const delay = differenceInMinutes(
@@ -36,7 +36,7 @@ function parseCrawlFlareDeparture(
 export function parseCrawlFlareDepartures(
   crawlData: CrawlData,
   departuresRaw: IsCached<CrawlFlareDeparture[]>,
-  trainTypeFilter?: TrainType
+  trainTypeFilter?: TrainType,
 ): TrainResponse[] {
   const departures: TrainResponse[] = [];
 
@@ -45,17 +45,23 @@ export function parseCrawlFlareDepartures(
       return;
     }
 
-    const stopFound = departure.stops.find((stop) =>
-      crawlData.stopToMatch.includes(stop)
-    );
+    // const stopFound = departure.stops.find((stop) =>
+    //   crawlData.stopToMatch.includes(stop),
+    // );
 
-    if (!stopFound) {
-      return;
-    }
+    // if (!stopFound) {
+    //   console.log(
+    //     "Skipping departure, stop not found",
+    //     departure,
+    //     crawlData.stopToMatch,
+    //   );
+    //   return;
+    // }
 
-    departures.push(
-      parseCrawlFlareDeparture(crawlData.destinationName, departure)
-    );
+    if (crawlData.stopToMatch.includes(departure.traffic.destination))
+      departures.push(
+        parseCrawlFlareDeparture(crawlData.destinationName, departure),
+      );
   });
 
   return departures;
@@ -64,7 +70,7 @@ export function parseCrawlFlareDepartures(
 export function parseCrawlFlareDeparturesWithTitle(
   crawlData: CrawlData,
   departuresRaw: IsCached<CrawlFlareDeparture[]>,
-  trainTypeFilter?: TrainType
+  trainTypeFilter?: TrainType,
 ): DeparturesResponse {
   const title = trainTypeFilter
     ? `${crawlData.title} - ${trainTypeFilter}`
@@ -83,7 +89,7 @@ export function mergeCrawlFlareWithScheduledData(
   scheduledData: TrainResponse[],
   crawlRaw: CrawlFlareDeparture[],
   crawlData: CrawlData,
-  trainTypeFilter?: TrainType
+  trainTypeFilter?: TrainType,
 ): TrainResponse[] {
   const crawlDataFiltered = trainTypeFilter
     ? crawlRaw.filter((crawl) => crawl.trainType === trainTypeFilter)
@@ -91,7 +97,7 @@ export function mergeCrawlFlareWithScheduledData(
 
   const res = scheduledData.map((scheduled) => {
     const crawlDeparture = crawlDataFiltered.find(
-      (crawlDep) => crawlDep.trainNumber === scheduled.trainNumber
+      (crawlDep) => crawlDep.trainNumber === scheduled.trainNumber,
     );
 
     if (!crawlDeparture) {
@@ -99,7 +105,7 @@ export function mergeCrawlFlareWithScheduledData(
     }
 
     const stopFound = crawlDeparture.stops.find((stop) =>
-      crawlData.stopToMatch.includes(stop)
+      crawlData.stopToMatch.includes(stop),
     );
 
     if (!stopFound) {
