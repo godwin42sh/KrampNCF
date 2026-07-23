@@ -24,7 +24,10 @@ API documentation (Swagger UI) is served at `/docs`, the OpenAPI spec at `/docs-
 ```bash
 bun run typecheck
 bun run lint
+bun run test
 ```
+
+Tests use Bun's built-in runner; specs live next to the code as `*.spec.ts`.
 
 ## Environment variables
 
