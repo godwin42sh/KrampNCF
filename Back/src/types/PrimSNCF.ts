@@ -31,11 +31,11 @@ export interface MonitoredVehicleJourney {
   LineRef: MonitoringRef;
   OperatorRef: MonitoringRef;
   FramedVehicleJourneyRef: FramedVehicleJourneyRef;
-  DirectionName: any[];
+  DirectionName: unknown[];
   DestinationRef: MonitoringRef;
   DestinationName: MonitoringRef[];
-  VehicleJourneyName: any[];
-  JourneyNote: any[];
+  VehicleJourneyName: unknown[];
+  JourneyNote: MonitoringRef[];
   MonitoredCall: MonitoredCall;
   TrainNumbers: TrainNumbers;
 }

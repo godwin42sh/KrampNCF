@@ -19,9 +19,7 @@ const setSNCFBackground = (stack, color, radius = false) => {
 }
 
 const filterOnlyDelays = (trains) => {
-  return trains.filter(train => {
-    train.data.find(schedule => schedule.delay);
-  });
+  return trains.filter(train => train.data.find(schedule => schedule.delay));
 }
 
 const setTrainUrl = (trainStack, trainTitle) => {
@@ -88,7 +86,7 @@ const makeTrainScheduleOld = (trainStack, data, delaysOnly) => {
 
 // 	scheduleStack.addSpacer();
 
-  [timeText, color] = getTimeTextAndColor(data);
+  const [timeText, color] = getTimeTextAndColor(data);
 
   const time = scheduleStack.addText(timeText);
   time.font = new Font(fontTextBold, 15);
@@ -127,7 +125,7 @@ const makeTrainTime = (scheduleStack, data) => {
 
   if (departureSanitized.delay) {
     const delayText = scheduleStack.addText(`+${departureSanitized.delay}`);
-    color = Color.red();
+    const color = Color.red();
     time.textColor = color;
     delayText.textColor = color;
     delayText.font = new Font(fontTextBold, 10);
@@ -154,7 +152,7 @@ const makeTrainSchedule = (trainStack, data, delaysOnly) => {
   }
   
   if (data.dock) {
-    makeTrainDock(scheduleStack, "2");
+    makeTrainDock(scheduleStack, data.dock);
   }
   else {
     scheduleStack.addSpacer(28.5);

@@ -14,7 +14,7 @@ export interface CrawlFlareDeparture {
   missionCode: MissionCode | null;
   trainLine: TrainLine;
   isGL: boolean;
-  shortTermInformations: any[];
+  shortTermInformations: unknown[];
   presentation: Presentation;
   stops: string[];
   alternativeMeans: null;

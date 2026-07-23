@@ -1,9 +1,6 @@
-version: "3.9"
 services:
   api:
     hostname: api
-    links:
-      - redis
     image: godwin42sh/krampncf:latest
     # build: ./Back
     ports:
@@ -12,10 +9,11 @@ services:
       - redis
     environment:
       - PORT=80
-      - REDIS_URL=
+      - REDIS_URL=redis://redis:6379
       - SNCF_API_URL=https://api.sncf.com/v1
       - SNCF_API_KEY=
       - SNCF_GTFSRT_URL=https://proxy.transport.data.gouv.fr/resource/sncf-ter-gtfs-rt-trip-updates
   redis:
     hostname: redis
-    image: redis:7.2.3
+    image: redis:7.4-alpine
+    command: ["redis-server", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru"]
