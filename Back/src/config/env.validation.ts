@@ -33,7 +33,13 @@ export type EnvironmentVariables = z.infer<typeof envSchema>;
 export function validateEnv(
   config: Record<string, unknown>,
 ): EnvironmentVariables {
-  const result = envSchema.safeParse(config);
+  // Empty strings count as unset: docker-compose passes optional vars
+  // through as "" when they are not defined in .env.
+  const cleaned = Object.fromEntries(
+    Object.entries(config).filter(([, value]) => value !== ""),
+  );
+
+  const result = envSchema.safeParse(cleaned);
 
   if (!result.success) {
     throw new Error(

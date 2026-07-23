@@ -40,4 +40,6 @@ Required (the app fails fast at boot when missing):
 | `SNCF_API_KEY` | Navitia API key |
 | `SNCF_GTFSRT_URL` | GTFS-RT trip-updates feed URL |
 
+For docker-compose deployments, copy the repo-root `.env.example` to `.env` next to `docker-compose.yaml` — Compose reads it automatically and interpolates the values (empty values count as unset).
+
 Optional (endpoints depending on them return 503 when unset): `SNCF_API_PRIM_URL`, `SNCF_API_PRIM_KEY`, `SNCF_CRAWL_URL`, `FLARE_API_URL`, `SNCF_CRAWL_FLARE_URL`, `REDIS_CRAWL_EXPIRE`, `DEFAULT_FETCH_RT_METHOD` (`gtfs` | `prim` | `crawlFlare`), `AWTRIX_ICON_TER`, `AWTRIX_ICON_RER`, `PORT`.

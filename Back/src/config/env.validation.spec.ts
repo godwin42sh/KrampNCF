@@ -37,6 +37,25 @@ describe("validateEnv", () => {
     ).toThrow(/Invalid environment configuration/);
   });
 
+  it("treats empty strings as unset (docker-compose passthrough)", () => {
+    const result = validateEnv({
+      ...validMinimalEnv,
+      DEFAULT_FETCH_RT_METHOD: "",
+      REDIS_CRAWL_EXPIRE: "",
+      SNCF_API_PRIM_URL: "",
+    });
+
+    expect(result.DEFAULT_FETCH_RT_METHOD).toBeUndefined();
+    expect(result.REDIS_CRAWL_EXPIRE).toBeUndefined();
+    expect(result.SNCF_API_PRIM_URL).toBeUndefined();
+  });
+
+  it("rejects a required variable set to an empty string", () => {
+    expect(() =>
+      validateEnv({ ...validMinimalEnv, SNCF_API_KEY: "" }),
+    ).toThrow(/Invalid environment configuration/);
+  });
+
   it("accepts a valid DEFAULT_FETCH_RT_METHOD", () => {
     const result = validateEnv({
       ...validMinimalEnv,

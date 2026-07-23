@@ -10,9 +10,18 @@ services:
     environment:
       - PORT=80
       - REDIS_URL=redis://redis:6379
-      - SNCF_API_URL=https://api.sncf.com/v1
-      - SNCF_API_KEY=
-      - SNCF_GTFSRT_URL=https://proxy.transport.data.gouv.fr/resource/sncf-ter-gtfs-rt-trip-updates
+      - SNCF_API_URL=${SNCF_API_URL:-https://api.sncf.com/v1}
+      - SNCF_API_KEY=${SNCF_API_KEY}
+      - SNCF_GTFSRT_URL=${SNCF_GTFSRT_URL:-https://proxy.transport.data.gouv.fr/resource/sncf-ter-gtfs-rt-trip-updates}
+      - SNCF_API_PRIM_URL=${SNCF_API_PRIM_URL:-}
+      - SNCF_API_PRIM_KEY=${SNCF_API_PRIM_KEY:-}
+      - SNCF_CRAWL_URL=${SNCF_CRAWL_URL:-}
+      - FLARE_API_URL=${FLARE_API_URL:-}
+      - SNCF_CRAWL_FLARE_URL=${SNCF_CRAWL_FLARE_URL:-}
+      - REDIS_CRAWL_EXPIRE=${REDIS_CRAWL_EXPIRE:-}
+      - DEFAULT_FETCH_RT_METHOD=${DEFAULT_FETCH_RT_METHOD:-}
+      - AWTRIX_ICON_TER=${AWTRIX_ICON_TER:-}
+      - AWTRIX_ICON_RER=${AWTRIX_ICON_RER:-}
   redis:
     hostname: redis
     image: redis:7.4-alpine
