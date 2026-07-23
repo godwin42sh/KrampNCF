@@ -61,17 +61,24 @@ export class SncfService {
     const cached = await this.cache.getJson<Departure[]>(redisKey);
 
     if (cached) {
+      this.logger.debug(
+        `Cache hit ${redisKey} (${cached.length} departures)`,
+      );
       return { isCached: true, data: cached };
     }
 
     let resData: Departure[] = [];
-    this.logger.debug(`Fetching from SNCF API: ${url}`);
+    this.logger.debug(`Cache miss ${redisKey} — fetching ${url}`);
+    const startedAt = Date.now();
 
     try {
       const res = await fetch(this.baseUrl + url, { headers: this.headers });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const data = (await res.json()) as { departures: Departure[] };
       resData = data.departures ?? [];
+      this.logger.debug(
+        `SNCF API returned ${resData.length} departures in ${Date.now() - startedAt}ms`,
+      );
       this.cache.setJson(redisKey, resData, CACHE_TTL_SECONDS);
     } catch (err) {
       this.logger.error(`SNCF API fetch failed: ${(err as Error).message}`);

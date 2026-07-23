@@ -1,14 +1,28 @@
 import "reflect-metadata";
 
-import { Logger } from "@nestjs/common";
+import { Logger, LogLevel } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { ZodValidationPipe, cleanupOpenApiDoc } from "nestjs-zod";
 
 import { AppModule } from "./app.module";
+import { LOG_LEVELS } from "./config/env.validation";
+
+/**
+ * LOG_LEVEL selects the most verbose level to emit (default: debug, so
+ * every step of every call is traced; set LOG_LEVEL=log to quiet down).
+ */
+function resolveLogLevels(): LogLevel[] {
+  const requested = process.env.LOG_LEVEL || "debug";
+  const index = (LOG_LEVELS as readonly string[]).indexOf(requested);
+
+  return LOG_LEVELS.slice(0, index === -1 ? 4 : index + 1) as LogLevel[];
+}
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: resolveLogLevels(),
+  });
 
   app.useGlobalPipes(new ZodValidationPipe());
   app.enableShutdownHooks();

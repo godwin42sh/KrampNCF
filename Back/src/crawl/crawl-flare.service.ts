@@ -85,11 +85,15 @@ export class CrawlFlareService {
     const cached = await this.cache.getJson<CrawlFlareDeparture[]>(redisKey);
 
     if (cached) {
+      this.logger.debug(`Cache hit ${redisKey} (${cached.length} departures)`);
       return { isCached: true, data: cached };
     }
 
     let resData: CrawlFlareDeparture[] = [];
-    this.logger.debug("Crawling SNCF site through FlareSolverr");
+    this.logger.debug(
+      `Cache miss — crawling ${body.url} through FlareSolverr`,
+    );
+    const startedAt = Date.now();
 
     try {
       const res = await fetch(flaresolverrUrl, {
@@ -104,6 +108,16 @@ export class CrawlFlareService {
 
       const data = (await res.json()) as { solution: { response: string } };
       resData = this.getJsonFromHtml(data.solution.response);
+
+      this.logger.debug(
+        `FlareSolverr returned ${resData.length} departures in ${Date.now() - startedAt}ms`,
+      );
+
+      if (!resData.length) {
+        this.logger.warn(
+          "FlareSolverr response contained no JSON payload (challenge page?)",
+        );
+      }
 
       this.cache.setJson(redisKey, resData, this.cacheTtlSeconds);
     } catch (err) {

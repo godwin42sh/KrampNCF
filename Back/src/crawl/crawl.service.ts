@@ -107,11 +107,13 @@ export class CrawlService {
     const cached = await this.cache.getJson<CrawlRes[]>(redisKey);
 
     if (cached) {
+      this.logger.debug(`Cache hit ${redisKey} (${cached.length} rows)`);
       return { isCached: true, data: cached };
     }
 
     let resData: CrawlRes[] = [];
-    this.logger.debug(`Crawling SNCF schedule: ${url}`);
+    this.logger.debug(`Cache miss — crawling SNCF schedule ${url}`);
+    const startedAt = Date.now();
 
     try {
       const res = await fetch(this.baseUrl + url, { headers: this.headers });
@@ -119,6 +121,9 @@ export class CrawlService {
         throw new Error(`HTTP error! status: ${res.status}`);
       }
       resData = this.parseDeparturesFromHtml(await res.text());
+      this.logger.debug(
+        `Crawl parsed ${resData.length} rows in ${Date.now() - startedAt}ms`,
+      );
       this.cache.setJson(redisKey, resData, this.cacheTtlSeconds);
     } catch (err) {
       this.logger.error(`Crawl failed: ${(err as Error).message}`);

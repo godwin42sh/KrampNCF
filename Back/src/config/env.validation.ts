@@ -2,6 +2,10 @@ import { z } from "zod";
 
 export const RT_FETCH_TYPES = ["gtfs", "prim", "crawlFlare"] as const;
 
+/** Ordered from least to most verbose. */
+export const LOG_LEVELS = ["error", "warn", "log", "debug", "verbose"] as const;
+export type AppLogLevel = (typeof LOG_LEVELS)[number];
+
 /**
  * Required vars fail the boot (fail fast, §2.2 of the optimization report).
  * Feature-specific vars are optional: the endpoints that need them return
@@ -26,6 +30,8 @@ export const envSchema = z.object({
 
   AWTRIX_ICON_TER: z.string().optional(),
   AWTRIX_ICON_RER: z.string().optional(),
+
+  LOG_LEVEL: z.enum(LOG_LEVELS).optional(),
 });
 
 export type EnvironmentVariables = z.infer<typeof envSchema>;

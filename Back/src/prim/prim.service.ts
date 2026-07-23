@@ -61,11 +61,13 @@ export class PrimService {
     const cached = await this.cache.getJson<StopMonitoringDelivery[]>(redisKey);
 
     if (cached) {
+      this.logger.debug(`Cache hit ${redisKey} (${cached.length} deliveries)`);
       return { isCached: true, data: cached };
     }
 
     let resData: StopMonitoringDelivery[] = [];
-    this.logger.debug(`Fetching from PRIM API: ${url}`);
+    this.logger.debug(`Cache miss — fetching ${url}`);
+    const startedAt = Date.now();
 
     try {
       const res = await fetch(url, { headers: { apikey: apiKey } });
@@ -73,6 +75,9 @@ export class PrimService {
       const data = (await res.json()) as PrimSNCF;
 
       resData = data.Siri.ServiceDelivery.StopMonitoringDelivery;
+      this.logger.debug(
+        `PRIM API returned ${resData.length} deliveries in ${Date.now() - startedAt}ms`,
+      );
       this.cache.setJson(redisKey, resData, CACHE_TTL_SECONDS);
     } catch (err) {
       this.logger.error(`PRIM API fetch failed: ${(err as Error).message}`);

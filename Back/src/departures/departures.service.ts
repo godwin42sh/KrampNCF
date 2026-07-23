@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   ServiceUnavailableException,
 } from "@nestjs/common";
@@ -49,6 +50,7 @@ import {
 
 @Injectable()
 export class DeparturesService {
+  private readonly logger = new Logger(DeparturesService.name);
   private readonly awtrixIcons: AwtrixIcons;
   private readonly defaultFetchMethod: RTFetchType;
 
@@ -115,10 +117,17 @@ export class DeparturesService {
   async getRealtimeBothDirections(): Promise<DeparturesResponse[]> {
     const feedRes = await this.getFeedOrThrow();
 
-    return [
+    const results = [
       getDeparturesFromToRealtime(linesData[0], linesData[1], feedRes),
       getDeparturesFromToRealtime(linesData[1], linesData[0], feedRes),
     ];
+
+    this.logger.debug(
+      `realtime both directions: ${results.map((r) => `${r.title}=${r.data.length}`).join(", ")}` +
+        `${feedRes.isCached ? " (cached feed)" : ""}`,
+    );
+
+    return results;
   }
 
   async getRealtimeForLine(id: number): Promise<DeparturesResponse> {
@@ -136,11 +145,23 @@ export class DeparturesService {
       );
 
       if (lineDataTo) {
-        return getDeparturesFromToRealtime(lineData, lineDataTo, feedRes);
+        const result = getDeparturesFromToRealtime(
+          lineData,
+          lineDataTo,
+          feedRes,
+        );
+        this.logger.debug(
+          `realtime line=${lineData.id} (from-to): ${result.data.length} trains`,
+        );
+        return result;
       }
     }
 
-    return getDeparturesFromLineDataRealtime(lineData, feedRes);
+    const result = getDeparturesFromLineDataRealtime(lineData, feedRes);
+    this.logger.debug(
+      `realtime line=${lineData.id}: ${result.data.length} trains`,
+    );
+    return result;
   }
 
   // --- scheduled + realtime merge flows -------------------------------
@@ -178,6 +199,11 @@ export class DeparturesService {
       this.crawl.getDeparturesSafe(lineData),
     ]);
 
+    this.logger.debug(
+      `gtfs flow line=${lineData.id}: scheduled=${scheduled.data.length}` +
+        `${scheduled.isCached ? " (cached)" : ""}, feed=${feedRes ? "ok" : "unavailable"}, docks=${crawlDocks.length}`,
+    );
+
     const res = this.makeResponseScaffold(
       lineData,
       dateFrom,
@@ -191,6 +217,9 @@ export class DeparturesService {
     );
 
     if (!departures.length || !feedRes) {
+      this.logger.debug(
+        `gtfs flow line=${lineData.id}: returning empty (filtered=${departures.length}, feed=${feedRes ? "ok" : "unavailable"})`,
+      );
       return res;
     }
 
@@ -205,6 +234,10 @@ export class DeparturesService {
         tripsDelayed,
         departure,
       ),
+    );
+
+    this.logger.debug(
+      `gtfs flow line=${lineData.id}: filtered=${departures.length}, delayed stop updates=${tripsDelayed.length} -> ${resTimes.length} trains`,
     );
 
     return {
@@ -231,6 +264,11 @@ export class DeparturesService {
       this.crawl.getDeparturesSafe(lineData),
     ]);
 
+    this.logger.debug(
+      `prim flow line=${lineData.id}: scheduled=${scheduled.data.length}` +
+        `${scheduled.isCached ? " (cached)" : ""}, prim=${primRes ? `${primRes.data.length} deliveries` : "unavailable"}, docks=${crawlDocks.length}`,
+    );
+
     const res = this.makeResponseScaffold(
       lineData,
       dateFrom,
@@ -244,6 +282,9 @@ export class DeparturesService {
     );
 
     if (!departures.length || !primRes) {
+      this.logger.debug(
+        `prim flow line=${lineData.id}: returning empty (filtered=${departures.length}, prim=${primRes ? "ok" : "unavailable"})`,
+      );
       return res;
     }
 
@@ -251,6 +292,10 @@ export class DeparturesService {
 
     const resTimes = departures.map((departure) =>
       getDeparturesFromScheduledAndPrim(lineData, departure, visits),
+    );
+
+    this.logger.debug(
+      `prim flow line=${lineData.id}: filtered=${departures.length}, visits=${visits.length} -> ${resTimes.length} trains`,
     );
 
     return {
@@ -283,6 +328,11 @@ export class DeparturesService {
         : Promise.resolve(emptyCrawl),
     ]);
 
+    this.logger.debug(
+      `crawlFlare flow line=${lineData.id}: scheduled=${scheduled.data.length}` +
+        `${scheduled.isCached ? " (cached)" : ""}, crawl=${departuresCrawl.data.length} departures`,
+    );
+
     const res = this.makeResponseScaffold(
       lineData,
       dateFrom,
@@ -296,18 +346,26 @@ export class DeparturesService {
     );
 
     if (!departures.length || !crawlData) {
+      this.logger.debug(
+        `crawlFlare flow line=${lineData.id}: returning empty (filtered=${departures.length}, crawlData=${crawlData ? "ok" : "missing"})`,
+      );
       return res;
     }
 
     const resTimesScheduled = parseScheduledData(lineData, departures);
+    const merged = mergeCrawlFlareWithScheduledData(
+      resTimesScheduled,
+      departuresCrawl.data,
+      crawlData,
+    );
+
+    this.logger.debug(
+      `crawlFlare flow line=${lineData.id}: filtered=${departures.length} -> ${merged.length} trains`,
+    );
 
     return {
       ...res,
-      data: mergeCrawlFlareWithScheduledData(
-        resTimesScheduled,
-        departuresCrawl.data,
-        crawlData,
-      ),
+      data: merged,
     };
   }
 

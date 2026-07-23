@@ -39,6 +39,9 @@ export class GtfsService {
 
   async getFeed(): Promise<IsCached<FeedMessage> | null> {
     if (this.memCache && Date.now() - this.memCache.fetchedAt < MEM_TTL_MS) {
+      this.logger.debug(
+        `In-memory cache hit (${this.memCache.feed.entity?.length ?? 0} entities)`,
+      );
       return { isCached: true, data: this.memCache.feed };
     }
 
@@ -48,9 +51,15 @@ export class GtfsService {
       const feed = GtfsRealtimeBindings.transit_realtime.FeedMessage.decode(
         new Uint8Array(cachedBytes),
       );
+      this.logger.debug(
+        `Decoded ${cachedBytes.length} bytes from Redis (${feed.entity?.length ?? 0} entities)`,
+      );
       this.memCache = { feed, fetchedAt: Date.now() };
       return { isCached: true, data: feed };
     }
+
+    this.logger.debug(`Cache miss — fetching feed from ${this.url}`);
+    const startedAt = Date.now();
 
     try {
       const res = await fetch(this.url);
@@ -60,6 +69,10 @@ export class GtfsService {
       const bytes = new Uint8Array(await res.arrayBuffer());
       const feed =
         GtfsRealtimeBindings.transit_realtime.FeedMessage.decode(bytes);
+
+      this.logger.debug(
+        `Fetched ${bytes.length} bytes in ${Date.now() - startedAt}ms (${feed.entity?.length ?? 0} entities)`,
+      );
 
       this.cache.setBuffer(REDIS_KEY, Buffer.from(bytes), TTL_SECONDS);
       this.memCache = { feed, fetchedAt: Date.now() };

@@ -1,10 +1,10 @@
 services:
   api:
     hostname: api
-    image: godwin42sh/krampncf:latest
-    # build: ./Back
+    # image: godwin42sh/krampncf:latest
+    build: ./Back
     ports:
-      - "80:80"
+      - "8080:80"
     depends_on:
       - redis
     environment:
@@ -22,7 +22,15 @@ services:
       - DEFAULT_FETCH_RT_METHOD=${DEFAULT_FETCH_RT_METHOD:-}
       - AWTRIX_ICON_TER=${AWTRIX_ICON_TER:-}
       - AWTRIX_ICON_RER=${AWTRIX_ICON_RER:-}
+      - LOG_LEVEL=${LOG_LEVEL:-}
   redis:
     hostname: redis
     image: redis:7.4-alpine
-    command: ["redis-server", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru"]
+    command:
+      [
+        "redis-server",
+        "--maxmemory",
+        "64mb",
+        "--maxmemory-policy",
+        "allkeys-lru",
+      ]
