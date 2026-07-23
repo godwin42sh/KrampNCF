@@ -12,7 +12,7 @@ import { makeDeparture } from "./departures.utils.spec";
 
 export function makeVisit(overrides: {
   lineRef?: string;
-  destinationRef?: string;
+  destinationName?: string;
   journeyNote?: string;
   trainNumber?: string;
   aimedDeparture?: string;
@@ -22,10 +22,10 @@ export function makeVisit(overrides: {
 }): MonitoredStopVisit {
   return {
     MonitoredVehicleJourney: {
-      LineRef: { value: overrides.lineRef ?? primsData[0].primLineRef },
-      DestinationRef: {
-        value: overrides.destinationRef ?? primsData[0].primDestinationRef,
-      },
+      LineRef: { value: overrides.lineRef ?? "STIF:Line::C01727:" },
+      DestinationName: [
+        { value: overrides.destinationName ?? "Paris Austerlitz" },
+      ],
       JourneyNote: overrides.journeyNote
         ? [{ value: overrides.journeyNote }]
         : [],
@@ -44,7 +44,7 @@ export function makeVisit(overrides: {
   } as unknown as MonitoredStopVisit;
 }
 
-const primData = primsData[0];
+const primData = primsData[0]; // Étampes, destinationMatch ["Paris Austerlitz"]
 
 describe("buildDepartureFromStops", () => {
   it("builds a train response with delay and dock", () => {
@@ -67,44 +67,97 @@ describe("buildDepartureFromStops", () => {
         departureTime: "12:07",
         arrivalTime: "12:06",
         trainNumber: "123456",
+        trainType: "RER",
         delay: 7,
         dock: "3",
       },
     ]);
   });
 
-  it("filters out other lines and destinations", () => {
-    const result = buildDepartureFromStops(
+  it("maps the line ref to a train type", () => {
+    const [rer] = buildDepartureFromStops(
       primData,
       [
         makeVisit({
-          lineRef: "STIF:Line::OTHER:",
-          expectedDeparture: "2026-07-23T12:00:00+02:00",
-        }),
-        makeVisit({
-          destinationRef: "STIF:StopPoint:Q:OTHER:",
+          lineRef: "STIF:Line::C01857:",
           expectedDeparture: "2026-07-23T12:00:00+02:00",
         }),
       ],
       [],
     );
 
-    expect(result).toEqual([]);
+    expect(rer.trainType).toBe("TER");
+  });
+
+  it("drops an 'unknown' platform instead of showing it as a dock", () => {
+    const result = buildDepartureFromStops(
+      primData,
+      [
+        makeVisit({
+          expectedDeparture: "2026-07-23T12:00:00+02:00",
+          platform: "unknown",
+        }),
+      ],
+      [],
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].dock).toBeUndefined();
+  });
+
+  it("filters out other directions by destination name", () => {
+    const result = buildDepartureFromStops(
+      primData,
+      [
+        makeVisit({
+          destinationName: "Saint-Martin d'Étampes", // wrong direction
+          expectedDeparture: "2026-07-23T12:00:00+02:00",
+        }),
+        makeVisit({
+          destinationName: "Paris Austerlitz", // kept
+          expectedDeparture: "2026-07-23T12:10:00+02:00",
+        }),
+      ],
+      [],
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].departureTime).toBe("12:10");
+  });
+
+  it("filters by line when primLineRefs is set", () => {
+    const terOnly = { ...primData, primLineRefs: ["STIF:Line::C01857:"] };
+
+    const result = buildDepartureFromStops(
+      terOnly,
+      [
+        makeVisit({
+          lineRef: "STIF:Line::C01727:", // RER C, excluded
+          expectedDeparture: "2026-07-23T12:00:00+02:00",
+        }),
+        makeVisit({
+          lineRef: "STIF:Line::C01857:", // TER, kept
+          expectedDeparture: "2026-07-23T12:10:00+02:00",
+        }),
+      ],
+      [],
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].departureTime).toBe("12:10");
   });
 
   it("filters by journey note when configured", () => {
-    const rerData = primsData[2]; // primJourneyNote: SARA/ORET/VETO
+    const noteData = { ...primData, primJourneyNote: ["SARA", "ORET", "VETO"] };
 
     const result = buildDepartureFromStops(
-      rerData,
+      noteData,
       [
         makeVisit({
-          lineRef: rerData.primLineRef,
           journeyNote: "SARA",
           expectedDeparture: "2026-07-23T12:00:00+02:00",
         }),
         makeVisit({
-          lineRef: rerData.primLineRef,
           journeyNote: "NOPE",
           expectedDeparture: "2026-07-23T12:10:00+02:00",
         }),

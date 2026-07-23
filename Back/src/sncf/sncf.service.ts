@@ -64,6 +64,9 @@ export class SncfService {
       this.logger.debug(
         `Cache hit ${redisKey} (${cached.length} departures)`,
       );
+      if (!cached.length) {
+        this.logger.warn(`Cached SNCF result is empty for ${redisKey}`);
+      }
       return { isCached: true, data: cached };
     }
 
@@ -82,6 +85,10 @@ export class SncfService {
       this.cache.setJson(redisKey, resData, CACHE_TTL_SECONDS);
     } catch (err) {
       this.logger.error(`SNCF API fetch failed: ${(err as Error).message}`);
+    }
+
+    if (!resData.length) {
+      this.logger.warn(`SNCF API returned no departures for ${url}`);
     }
 
     return { isCached: false, data: resData };

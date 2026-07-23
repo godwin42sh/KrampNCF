@@ -50,8 +50,8 @@ describe("CrawlFlareService.getDepartures", () => {
     ]);
   });
 
-  it("returns an empty list when the payload cannot be extracted", async () => {
-    const { service } = makeService();
+  it("returns an empty list when the payload cannot be extracted, cached briefly", async () => {
+    const { service, cache } = makeService();
     stubFetch(async () =>
       Response.json({ solution: { response: "<html>challenge page</html>" } }),
     );
@@ -59,6 +59,10 @@ describe("CrawlFlareService.getDepartures", () => {
     const result = await service.getDepartures(crawlsData[0]);
 
     expect(result.data).toEqual([]);
+    // empty results must not stick for the whole configured TTL (60 here)
+    expect(cache.jsonWrites).toEqual([
+      { key: expect.stringContaining("crawlFlare:"), ttlSeconds: 30 },
+    ]);
   });
 
   it("serves from the cache on the second call", async () => {

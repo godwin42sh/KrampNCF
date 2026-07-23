@@ -24,16 +24,16 @@ afterEach(() => {
 });
 
 describe("PrimService", () => {
-  it("builds the stop-monitoring URL with URLSearchParams", () => {
+  it("builds the stop-monitoring URL with only MonitoringRef (no LineRef)", () => {
     const { service } = makeService();
 
     const url = service.makeUrlFromPrimData(primsData[0]);
 
     expect(url).toBe(
       "https://prim.example.com/marketplace/stop-monitoring" +
-        `?MonitoringRef=${encodeURIComponent(primsData[0].primDepartureRef)}` +
-        `&LineRef=${encodeURIComponent(primsData[0].primLineRef)}`,
+        `?MonitoringRef=${encodeURIComponent(primsData[0].primDepartureRef)}`,
     );
+    expect(url).not.toContain("LineRef");
   });
 
   it("fetches deliveries with the api key and caches them", async () => {

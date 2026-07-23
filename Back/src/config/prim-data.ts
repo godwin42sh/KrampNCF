@@ -1,41 +1,27 @@
 import { PrimData } from "../types/PrimData";
 
+// StopArea (ZdL) references come from IDFM's "zones-d-arrets" dataset,
+// railStation rows: Étampes = 43080, Gare d'Austerlitz = 43072.
+// Both directions carry RER C (C01727) and TER (C01857); no line filter so
+// every Paris–Étampes train shows up.
 const primsData: PrimData[] = [
   {
     id: 1,
     departureName: "Étampes",
     destinationName: "Austerlitz",
-    primDepartureRef: "STIF:StopPoint:Q:41298:",
-    primDestinationRef: "STIF:StopPoint:Q:41333:",
-    primLineRef: "STIF:Line::C01857:",
-    type: "TER",
+    primDepartureRef: "STIF:StopArea:SP:43080:",
+    destinationMatch: ["Paris Austerlitz"],
+    type: "train",
   },
   {
     id: 2,
     departureName: "Austerlitz",
     destinationName: "Étampes",
-    primDepartureRef: "STIF:StopPoint:Q:41333:",
-    primDestinationRef: "SNCF_ACCES_CLOUD:StopPoint:Q:87543009:LOC",
-    primLineRef: "STIF:Line::C01857:",
-    type: "TER",
-  },
-  {
-    id: 3,
-    departureName: "Étampes RER",
-    destinationName: "Austerlitz",
-    primDepartureRef: "STIF:StopPoint:Q:41298:",
-    primJourneyNote: ["SARA", "ORET", "VETO"],
-    primLineRef: "STIF:Line::C01727:",
-    type: "RER",
-  },
-  {
-    id: 4,
-    departureName: "Austerlitz RER",
-    destinationName: "Étampes",
-    primDepartureRef: "STIF:StopPoint:Q:41333:",
-    primJourneyNote: ["ELAO", "ELBA"],
-    primLineRef: "STIF:Line::C01727:",
-    type: "RER",
+    primDepartureRef: "STIF:StopArea:SP:43072:",
+    // Trains toward Étampes terminate at Saint-Martin d'Étampes (the stop
+    // right after Étampes); "Étampes" covers any that short-turn there.
+    destinationMatch: ["Saint-Martin d'Étampes", "Étampes"],
+    type: "train",
   },
 ];
 

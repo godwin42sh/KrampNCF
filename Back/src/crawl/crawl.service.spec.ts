@@ -58,6 +58,18 @@ describe("CrawlService", () => {
     ]);
   });
 
+  it("caches empty parses briefly instead of the full TTL", async () => {
+    const { service, cache } = makeService();
+    stubFetch(async () => new Response("<html>no accordions here</html>"));
+
+    const result = await service.getDepartures(linesData[0]);
+
+    expect(result.data).toEqual([]);
+    expect(cache.jsonWrites).toEqual([
+      { key: expect.stringContaining("crawl:"), ttlSeconds: 30 },
+    ]);
+  });
+
   it("throws 503 when SNCF_CRAWL_URL is not configured", async () => {
     const { service } = makeService(false);
 

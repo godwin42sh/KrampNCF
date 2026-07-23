@@ -54,6 +54,7 @@ export class GtfsService {
       this.logger.debug(
         `Decoded ${cachedBytes.length} bytes from Redis (${feed.entity?.length ?? 0} entities)`,
       );
+      this.warnIfEmpty(feed);
       this.memCache = { feed, fetchedAt: Date.now() };
       return { isCached: true, data: feed };
     }
@@ -73,6 +74,7 @@ export class GtfsService {
       this.logger.debug(
         `Fetched ${bytes.length} bytes in ${Date.now() - startedAt}ms (${feed.entity?.length ?? 0} entities)`,
       );
+      this.warnIfEmpty(feed);
 
       this.cache.setBuffer(REDIS_KEY, Buffer.from(bytes), TTL_SECONDS);
       this.memCache = { feed, fetchedAt: Date.now() };
@@ -81,6 +83,12 @@ export class GtfsService {
     } catch (err) {
       this.logger.error(`GTFS-RT fetch failed: ${(err as Error).message}`);
       return null;
+    }
+  }
+
+  private warnIfEmpty(feed: FeedMessage): void {
+    if (!feed.entity?.length) {
+      this.logger.warn("GTFS-RT feed contains no entities");
     }
   }
 }

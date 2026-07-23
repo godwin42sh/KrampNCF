@@ -20,6 +20,8 @@ type DataType = "Departures" | "Arrivals";
 
 const REGEX_MATCH_JSON = /(?:.*)(\[\{.*])(?:<\/pre>.*)/;
 
+const EMPTY_CACHE_TTL_SECONDS = 30;
+
 /**
  * Crawler for the SNCF departures endpoint through FlareSolverr.
  *
@@ -86,6 +88,9 @@ export class CrawlFlareService {
 
     if (cached) {
       this.logger.debug(`Cache hit ${redisKey} (${cached.length} departures)`);
+      if (!cached.length) {
+        this.logger.warn(`Cached FlareSolverr result is empty for ${redisKey}`);
+      }
       return { isCached: true, data: cached };
     }
 
@@ -115,11 +120,18 @@ export class CrawlFlareService {
 
       if (!resData.length) {
         this.logger.warn(
-          "FlareSolverr response contained no JSON payload (challenge page?)",
+          "FlareSolverr response contained no JSON payload (challenge page?) — " +
+            `raw response starts with: ${data.solution.response.slice(0, 500)}`,
         );
       }
 
-      this.cache.setJson(redisKey, resData, this.cacheTtlSeconds);
+      // Empty results only stick for a short time so a transient challenge
+      // page does not blank the API for the whole cache TTL.
+      this.cache.setJson(
+        redisKey,
+        resData,
+        resData.length ? this.cacheTtlSeconds : EMPTY_CACHE_TTL_SECONDS,
+      );
     } catch (err) {
       this.logger.error(
         `FlareSolverr crawl failed: ${(err as Error).message}`,

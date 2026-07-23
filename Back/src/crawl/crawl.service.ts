@@ -11,6 +11,8 @@ import type { CrawlRes } from "../types/CrawlRes";
 import type { IsCached } from "../types/IsCached";
 import type { LineData } from "../types/LineData";
 
+const EMPTY_CACHE_TTL_SECONDS = 30;
+
 /** Crawler for the ter.sncf.com departures page (dock/platform info). */
 @Injectable()
 export class CrawlService {
@@ -108,6 +110,9 @@ export class CrawlService {
 
     if (cached) {
       this.logger.debug(`Cache hit ${redisKey} (${cached.length} rows)`);
+      if (!cached.length) {
+        this.logger.warn(`Cached crawl result is empty for ${redisKey}`);
+      }
       return { isCached: true, data: cached };
     }
 
@@ -124,9 +129,20 @@ export class CrawlService {
       this.logger.debug(
         `Crawl parsed ${resData.length} rows in ${Date.now() - startedAt}ms`,
       );
-      this.cache.setJson(redisKey, resData, this.cacheTtlSeconds);
+      // Empty results only stick for a short time (see crawl-flare.service).
+      this.cache.setJson(
+        redisKey,
+        resData,
+        resData.length ? this.cacheTtlSeconds : EMPTY_CACHE_TTL_SECONDS,
+      );
     } catch (err) {
       this.logger.error(`Crawl failed: ${(err as Error).message}`);
+    }
+
+    if (!resData.length) {
+      this.logger.warn(
+        `Crawl returned no departures for ${url} (page layout change?)`,
+      );
     }
 
     return { isCached: false, data: resData };

@@ -44,9 +44,11 @@ export class PrimService {
 
   makeUrlFromPrimData(primData: PrimData): string {
     const { baseUrl } = this.ensureConfigured();
+    // Only MonitoringRef: passing LineRef makes PRIM reject the request with
+    // 400 "Le couple MonitoringRef/LineRef n'existe pas" for these stops, so
+    // line filtering is done client-side instead.
     const query = new URLSearchParams({
       MonitoringRef: primData.primDepartureRef,
-      LineRef: primData.primLineRef,
     });
     return `${baseUrl}stop-monitoring?${query.toString()}`;
   }
@@ -62,6 +64,9 @@ export class PrimService {
 
     if (cached) {
       this.logger.debug(`Cache hit ${redisKey} (${cached.length} deliveries)`);
+      if (!cached.length) {
+        this.logger.warn(`Cached PRIM result is empty for ${redisKey}`);
+      }
       return { isCached: true, data: cached };
     }
 
@@ -81,6 +86,10 @@ export class PrimService {
       this.cache.setJson(redisKey, resData, CACHE_TTL_SECONDS);
     } catch (err) {
       this.logger.error(`PRIM API fetch failed: ${(err as Error).message}`);
+    }
+
+    if (!resData.length) {
+      this.logger.warn(`PRIM API returned no deliveries for ${url}`);
     }
 
     return { isCached: false, data: resData };

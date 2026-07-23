@@ -11,6 +11,24 @@ import type {
 } from "../types/PrimSNCF";
 import type { DeparturesResponse, TrainResponse } from "../types/Response";
 
+/** PRIM returns the literal "unknown" for platforms not yet assigned. */
+function normalizeDock(value?: string): string | undefined {
+  if (!value || value.toLowerCase() === "unknown") {
+    return undefined;
+  }
+  return value;
+}
+
+/** Map an IDFM LineRef to a coarse train type (drives the awtrix icon). */
+const LINE_REF_TO_TRAIN_TYPE: Record<string, string> = {
+  "STIF:Line::C01727:": "RER", // RER C
+  "STIF:Line::C01857:": "TER", // TER Paris-Austerlitz – Étampes – Orléans
+};
+
+function trainTypeFromLineRef(lineRef?: string): string | undefined {
+  return lineRef ? LINE_REF_TO_TRAIN_TYPE[lineRef] : undefined;
+}
+
 export function buildDepartureFromStops(
   primData: PrimData,
   visits: MonitoredStopVisit[],
@@ -21,18 +39,23 @@ export function buildDepartureFromStops(
   visits.forEach((visit) => {
     const journey = visit.MonitoredVehicleJourney;
 
+    // Direction filter: keep only trains heading the way we care about.
+    const destinationName = journey.DestinationName?.[0]?.value;
     if (
-      primData.primDestinationRef &&
-      journey.DestinationRef.value !== primData.primDestinationRef
+      primData.destinationMatch.length &&
+      (!destinationName || !primData.destinationMatch.includes(destinationName))
     ) {
       return;
     }
-    if (journey.LineRef.value !== primData.primLineRef) {
+    if (
+      primData.primLineRefs &&
+      !primData.primLineRefs.includes(journey.LineRef.value)
+    ) {
       return;
     }
     if (
       primData.primJourneyNote &&
-      !primData.primJourneyNote.includes(journey.JourneyNote[0]?.value)
+      !primData.primJourneyNote.includes(journey.JourneyNote?.[0]?.value)
     ) {
       return;
     }
@@ -66,6 +89,7 @@ export function buildDepartureFromStops(
       departureTime,
       arrivalTime,
       trainNumber: journey.TrainNumbers.TrainNumberRef[0].value,
+      trainType: trainTypeFromLineRef(journey.LineRef?.value),
     };
 
     if (monitoredCall.AimedDepartureTime && monitoredCall.ExpectedDepartureTime) {
@@ -79,8 +103,9 @@ export function buildDepartureFromStops(
       }
     }
 
-    if (monitoredCall.ArrivalPlatformName?.value) {
-      tmp.dock = monitoredCall.ArrivalPlatformName.value;
+    const dock = normalizeDock(monitoredCall.ArrivalPlatformName?.value);
+    if (dock) {
+      tmp.dock = dock;
     }
 
     res.push(tmp);
@@ -124,9 +149,8 @@ function mergePrimAndScheduled(
   const primDepartureTimeRaw =
     monitoredCall.ExpectedDepartureTime ?? monitoredCall.AimedDepartureTime;
 
-  const resInit = monitoredCall.ArrivalPlatformName?.value
-    ? { ...scheduled, dock: monitoredCall.ArrivalPlatformName.value }
-    : scheduled;
+  const primDock = normalizeDock(monitoredCall.ArrivalPlatformName?.value);
+  const resInit = primDock ? { ...scheduled, dock: primDock } : scheduled;
 
   if (!primDepartureTimeRaw) {
     return resInit;
@@ -156,7 +180,7 @@ function mergePrimAndScheduled(
     arrivalTime,
     departureTime,
     delay,
-    dock: monitoredCall.ArrivalPlatformName?.value,
+    dock: primDock,
   };
 }
 
