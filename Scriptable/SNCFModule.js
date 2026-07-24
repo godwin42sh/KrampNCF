@@ -55,6 +55,15 @@ const makeTrainTitle = (trainStack, train) => {
 
   title.lineLimit = 1;
 
+  // Optional train type (e.g. "Rémi", "RER") shown small and non-bold,
+  // like the date, right after the station name.
+  if (train.typeLabel) {
+    titleStack.addSpacer(4);
+    const typeTitle = titleStack.addText(train.typeLabel);
+    typeTitle.font = new Font(fontText, 12);
+    typeTitle.lineLimit = 1;
+  }
+
   titleStack.addSpacer();
 
   const dateTitle = titleStack.addText(titleTrainExp[1]);

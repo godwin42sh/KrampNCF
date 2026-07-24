@@ -42,12 +42,11 @@ const req = new Request(url);
 const reqData = await req.loadJSON();
 
 // Split into a Rémi (TER) table and a RER table, keeping both directions.
-// The type label is injected into the board title ("Étampes - 24/07" ->
-// "Étampes Rémi - 24/07") so it shows in each table header.
+// The type shows in each table header (small, non-bold) via typeLabel.
 const boardsByType = (boards, trainType, label) =>
   boards.map((board) => ({
     ...board,
-    title: board.title.replace(' - ', ` ${label} - `),
+    typeLabel: label,
     data: board.data.filter((train) => train.trainType === trainType),
   }));
 
