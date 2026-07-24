@@ -35,14 +35,25 @@ const addStackFromReqData = (reqData, hours) => {
 	});
 }
 
-// SIRI ET realtime for every board (both directions: Étampes→Austerlitz and
-// Austerlitz→Étampes, each mixing RER C and mainline Rémi).
+// SIRI ET realtime for both directions (Étampes and Austerlitz boards),
+// each mixing RER C and mainline Rémi (TER).
 const url = Conf.getUrlDeparturesSiriByType('train');
 const req = new Request(url);
 const reqData = await req.loadJSON();
 
+// Split into a Rémi (TER) table and a RER table, keeping both directions.
+// The type label is injected into the board title ("Étampes - 24/07" ->
+// "Étampes Rémi - 24/07") so it shows in each table header.
+const boardsByType = (boards, trainType, label) =>
+  boards.map((board) => ({
+    ...board,
+    title: board.title.replace(' - ', ` ${label} - `),
+    data: board.data.filter((train) => train.trainType === trainType),
+  }));
+
 if (Array.isArray(reqData)) {
-  addStackFromReqData(reqData, hours);
+  addStackFromReqData(boardsByType(reqData, 'TER', 'Rémi'), hours);
+  addStackFromReqData(boardsByType(reqData, 'RER', 'RER'), hours);
 }
 
 // BGTransparent.setTransparentBackground(widget, "large", "bottom");// 
