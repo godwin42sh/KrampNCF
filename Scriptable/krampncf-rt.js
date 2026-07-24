@@ -27,8 +27,9 @@ stack.layoutHorizontally();
 stack.topAlignContent();
 
 
-// const url = Conf.getUrlDepartures(true, idDeparture);
-const url = Conf.getUrlDeparturesCrawl('TER');
+// PRIM realtime for one direction (widget param: 1 = Étampes→Austerlitz,
+// 2 = Austerlitz→Étampes; defaults to 1).
+const url = Conf.getUrlDeparturesPrimById(idDeparture || 1);
 const req = new Request(url);
 const reqData = await req.loadJSON();
 

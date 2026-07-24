@@ -35,21 +35,15 @@ const addStackFromReqData = (reqData, hours) => {
 	});
 }
 
-// const urlTer = Conf.getUrlDepartures(true);
-// const urlTer = Conf.getUrlDeparturesPrimByType('TER');
-const urlTer = Conf.getUrlDeparturesCrawl('Rémi');
-const reqTer = new Request(urlTer);
-const reqDataTer = await reqTer.loadJSON();
+// PRIM realtime for every board (both directions: Étampes→Austerlitz and
+// Austerlitz→Étampes, each mixing RER C and TER).
+const url = Conf.getUrlDeparturesPrimByType('train');
+const req = new Request(url);
+const reqData = await req.loadJSON();
 
-console.log(reqDataTer)
-addStackFromReqData(reqDataTer, hours);
-
-const urlRer = Conf.getUrlDeparturesCrawl('RER');// 
-// const urlRer = Conf.getUrlDeparturesPrimByType('RER');
-const reqRer = new Request(urlRer);
-const reqDataRer = await reqRer.loadJSON();
-
-addStackFromReqData(reqDataRer, hours);
+if (Array.isArray(reqData)) {
+  addStackFromReqData(reqData, hours);
+}
 
 // BGTransparent.setTransparentBackground(widget, "large", "bottom");// 
 // SNCFModule.setSNCFBackground(widget, 'light');

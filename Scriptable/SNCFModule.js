@@ -28,9 +28,9 @@ const setSNCFBackground = (stack, color, radius = false) => {
 }
 
 const filterOnlyDelays = (trains) => {
-  return trains.filter(train => {
-    train.data.find(schedule => schedule.delay && schedule.delay >= 5);
-  });
+  return trains.filter(train =>
+    train.data.find(schedule => schedule.delay && schedule.delay >= 5)
+  );
 }
 
 const setTrainUrl = (trainStack, trainTitle) => {
