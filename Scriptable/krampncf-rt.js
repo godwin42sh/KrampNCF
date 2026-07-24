@@ -10,7 +10,7 @@ const Conf = importModule("KrampNCF-Conf");
 const dateNow = new Date();
 const hours = dateNow.getHours();
 const widgetParam = args.widgetParameter;
-const delaysOnly = widgetParam === 'delays';
+const delaysOnly = widgetParam ===  'delays';
 const idDeparture = !delaysOnly ? args.widgetParameter : false;
 
 if ((hours >= 7 && hours <= 8) || (hours >= 16 && hours <= 18)) {
@@ -26,7 +26,9 @@ const stack = widget.addStack();
 stack.layoutHorizontally();
 stack.topAlignContent();
 
-const url = Conf.getUrlDepartures(true, idDeparture);
+
+// const url = Conf.getUrlDepartures(true, idDeparture);
+const url = Conf.getUrlDeparturesCrawl('TER');
 const req = new Request(url);
 const reqData = await req.loadJSON();
 

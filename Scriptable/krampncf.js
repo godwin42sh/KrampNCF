@@ -6,6 +6,8 @@ const widget = new ListWidget();
 const SNCFModule = importModule("SNCFModule");
 const BGTransparent = importModule("BG-Transparent");
 const Conf = importModule("KrampNCF-Conf");
+const SendNotification
+ = importModule("SendNotification");
 
 const dateNow = new Date();
 const hours = dateNow.getHours();
@@ -27,7 +29,9 @@ stack.layoutHorizontally();
 stack.topAlignContent();
 stack.setPadding(10, 0, 5, 0);
 
-const url = Conf.getUrlDepartures(false, idDeparture);
+// const url = Conf.getUrlDepartures(true, idDeparture);
+const url = Conf.getUrlDeparturesCrawl('Rémi', idDeparture);
+// const url = Conf.getUrlDeparturesPrimByType('TER');
 const req = new Request(url);
 const reqData = await req.loadJSON();
 
@@ -38,20 +42,21 @@ if (Array.isArray(reqData)) {
 
   reqData.forEach((train, index) => {
     const isLast = index === reqData.length - 1;
-    SNCFModule.makeTrain(stack, train, isLast, delaysOnly); 
+    SNCFModule.makeTrain(stack, train, isLast, delaysOnly);
   });
 }
 else {
   SNCFModule.makeTrain(stack, reqData, true, delaysOnly);
 }
 
-BGTransparent.setTransparentBackground(widget, "medium", "top");
-SNCFModule.setSNCFBackground(widget, 'light');
+// BGTransparent.setTransparentBackground(widget, config.widgetFamily, "top");
+// SNCFModule.setSNCFBackground(widget, 'light');
 
 widget.addSpacer();
 
 if (!config.runsInWidget) {
-  widget.presentMedium();
+  widget.presentLarge();
+// console.log(config.widgetFamily)
 }
 
 Script.setWidget(widget);

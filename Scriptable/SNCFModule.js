@@ -2,16 +2,25 @@
 // These must be at the very top of the file. Do not edit.
 // icon-color: yellow; icon-glyph: magic;
 const Conf = importModule("KrampNCF-Conf");
+const SendNotification
+ = importModule("SendNotification");
 
 const fontText = "Avenir-Medium";
 const fontTextLight = "Avenir-Light";
 const fontTextBold = "Avenir-Heavy";
 
-const colorBGLight = new Color("2B313A");
+// const colorBGLight = new Color("f6f6f6");
+// const colorBGDark = new Color("d3d3d3");
+const colorBGLight = new Color("2B313A");// 
 const colorBGDark = new Color("161B26");
 
+// const colorBGTransparentDark = new Color("d3d3d3");
+
 const setSNCFBackground = (stack, color, radius = false) => {
-  stack.backgroundColor = color === 'light' ? colorBGLight : colorBGDark;
+//   stack.backgroundColor = color === 'light' ? colorBGLight : colorBGDark;
+
+  stack.borderWidth = 1;
+  stack.borderColor = color === 'light' ? colorBGLight : colorBGDark;
 
   if (Number.isInteger(radius)) {
     stack.cornerRadius = radius;
@@ -19,7 +28,9 @@ const setSNCFBackground = (stack, color, radius = false) => {
 }
 
 const filterOnlyDelays = (trains) => {
-  return trains.filter(train => train.data.find(schedule => schedule.delay));
+  return trains.filter(train => {
+    train.data.find(schedule => schedule.delay && schedule.delay >= 5);
+  });
 }
 
 const setTrainUrl = (trainStack, trainTitle) => {
@@ -40,10 +51,12 @@ const makeTrainTitle = (trainStack, train) => {
   const titleTrainExp = train.title.split(' - ');
   const title = titleStack.addText(titleTrainExp[0]);
 
-  title.font = new Font(fontTextBold, 16);
+  title.font = new Font(fontTextBold, 15,7);
 
-//   const dateTitle = titleStack.addText(' - '+titleTrainExp[1]);
+  title.lineLimit = 1;
+
   titleStack.addSpacer();
+
   const dateTitle = titleStack.addText(titleTrainExp[1]);
   dateTitle.font = new Font(fontText, 12);
 
@@ -71,30 +84,6 @@ const getTimeTextAndColor = (data) => {
   return [timeText, color];
 }
 
-const makeTrainScheduleOld = (trainStack, data, delaysOnly) => {
-  const scheduleStack = trainStack.addStack();
-  scheduleStack.layoutHorizontally();
-  scheduleStack.centerAlignContent();
-
-	if (!delaysOnly) {
-		const nameStation = scheduleStack.addText(data.title);
-		nameStation.font = new Font(fontText, 14);
-//     nameStation.minimumScaleFactor = 0.9;
-    nameStation.lineLimit = 1;
-		scheduleStack.addSpacer(5);
-  }
-
-// 	scheduleStack.addSpacer();
-
-  const [timeText, color] = getTimeTextAndColor(data);
-
-  const time = scheduleStack.addText(timeText);
-  time.font = new Font(fontTextBold, 15);
-  time.textColor = color;
-//   time.minimumScaleFactor = 0.5;
-  time.lineLimit = 1;
-}
-
 const makeTrainDock = (scheduleStack, dock) => {
   scheduleStack.setPadding(1, 0, 1, 0)
   scheduleStack.addSpacer();
@@ -109,10 +98,17 @@ const makeTrainDock = (scheduleStack, dock) => {
   dockText.font = new Font(fontTextLight, 14);
 }
 
-const makeTrainTime = (scheduleStack, data) => {
+const sendNotifWhenDelay = (data, departure, trainTitle) => {
+  const notifText = departure.time + ' +' + departure.delay;
+
+  SendNotification.sendUniqNotif(data.title, notifText, Conf.correspUrlTrain[trainTitle]);
+}
+
+const makeTrainTime = (scheduleStack, data, trainTitle) => {
   const departureSanitized = {
     time: data.departureTime ? data.departureTime : data.departure.time,
-    delay: data.delay ?? data.departure?.delay
+//     delay: data.delay ?? data.departure?.delay
+    delay: data.delay >= 5 ? data.delay : undefined
 };
 
 	let timeText = departureSanitized.time;
@@ -124,15 +120,16 @@ const makeTrainTime = (scheduleStack, data) => {
   time.lineLimit = 1;
 
   if (departureSanitized.delay) {
+    sendNotifWhenDelay(data, departureSanitized, trainTitle);
     const delayText = scheduleStack.addText(`+${departureSanitized.delay}`);
-    const color = Color.red();
+    color = Color.red();
     time.textColor = color;
     delayText.textColor = color;
     delayText.font = new Font(fontTextBold, 10);
   }
 }
 
-const makeTrainSchedule = (trainStack, data, delaysOnly) => {
+const makeTrainSchedule = (trainStack, data, delaysOnly, trainTitle) => {
   const containerStack = trainStack.addStack();
   containerStack.layoutHorizontally();
   containerStack.centerAlignContent();
@@ -141,11 +138,13 @@ const makeTrainSchedule = (trainStack, data, delaysOnly) => {
   scheduleStack.layoutHorizontally();
   scheduleStack.centerAlignContent();
 
-  makeTrainTime(scheduleStack, data);
+  makeTrainTime(scheduleStack, data, trainTitle);
 
 	if (!delaysOnly) {
-    scheduleStack.addSpacer()
-		const nameStation = scheduleStack.addText(data.title);
+    scheduleStack.addSpacer();
+    const nameStack = scheduleStack.addStack();
+		const nameStation = nameStack.addText(data.title);
+//     nameStack.size = new Size(57, 0);
 		nameStation.font = new Font(fontText, 13);
 //     nameStation.minimumScaleFactor = 0.9;
     nameStation.lineLimit = 1;
@@ -170,9 +169,9 @@ const makeEmptySchedules = (schedulesStack) => {
   emptyStack.addSpacer();
 }
 
-const makeTrain = (stack, train, isLast, delaysOnly = false) => {
+const makeTrain = (stack, train, isLast, delaysOnly = false, limit = 5) => {
   const trainStack = stack.addStack();
-  setSNCFBackground(trainStack, 'dark', 10);
+//   setSNCFBackground(trainStack, 'dark', 10);
   trainStack.layoutVertically();
 	trainStack.centerAlignContent();
   trainStack.setPadding(5, 5, 5, 5);
@@ -201,11 +200,11 @@ const makeTrain = (stack, train, isLast, delaysOnly = false) => {
   }
 
   //we limit to only first 5 train to avoid breaking display
-  train.data.slice(0, 5).forEach(data => {
+  train.data.slice(0, limit).forEach(data => {
     if (delaysOnly && data.departure && !data.departure.delay) {
       return;
     }
-    makeTrainSchedule(schedulesStack, data, delaysOnly);
+    makeTrainSchedule(schedulesStack, data, delaysOnly, train.title);
   });
   
   if (!isLast) {
