@@ -11,10 +11,12 @@ import crawlsData from "../config/crawl-data";
 import { RT_FETCH_TYPES } from "../config/env.validation";
 import linesData from "../config/lines-data";
 import primsData from "../config/prim-data";
+import siriBoards from "../config/siri-data";
 import { CrawlFlareService } from "../crawl/crawl-flare.service";
 import { CrawlService } from "../crawl/crawl.service";
 import { GtfsService } from "../gtfs/gtfs.service";
 import { PrimService } from "../prim/prim.service";
+import { SiriEtService } from "../siri-et/siri-et.service";
 import { SncfService } from "../sncf/sncf.service";
 import type { CrawlFlareDeparture } from "../types/CrawlFlareDeparture";
 import type { TrainType } from "../types/CrawlFlareDeparture";
@@ -47,6 +49,7 @@ import {
   getDeparturesFromScheduledAndPrim,
   parsePrimDeliveries,
 } from "./prim.utils";
+import { buildBoardFromSiriJourneys } from "./siri.utils";
 
 @Injectable()
 export class DeparturesService {
@@ -59,6 +62,7 @@ export class DeparturesService {
     private readonly sncf: SncfService,
     private readonly gtfs: GtfsService,
     private readonly prim: PrimService,
+    private readonly siriEt: SiriEtService,
     private readonly crawl: CrawlService,
     private readonly crawlFlare: CrawlFlareService,
   ) {
@@ -437,6 +441,52 @@ export class DeparturesService {
     }
 
     return departures;
+  }
+
+  // --- SIRI ET ---------------------------------------------------------
+
+  findSiriBoard(id: number) {
+    const board = siriBoards.find((b) => b.id === id);
+
+    if (!board) {
+      throw new NotFoundException("Siri board not found");
+    }
+
+    return board;
+  }
+
+  private async getSiriJourneysOrThrow() {
+    const journeys = await this.siriEt.getJourneys();
+
+    if (!journeys) {
+      throw new ServiceUnavailableException("Error while fetching SIRI ET");
+    }
+
+    return journeys;
+  }
+
+  async getSiriBoard(id: number): Promise<DeparturesResponse> {
+    const board = this.findSiriBoard(id);
+    const journeys = await this.getSiriJourneysOrThrow();
+
+    const res = buildBoardFromSiriJourneys(board, journeys);
+    this.logger.debug(
+      `siri board=${board.id} (${board.departureName}): ${res.data.length} departures from ${journeys.data.length} journeys`,
+    );
+
+    return res;
+  }
+
+  async getSiriBoardsByType(type: string): Promise<DeparturesResponse[]> {
+    const boards = siriBoards.filter((board) => board.type === type);
+
+    if (!boards.length) {
+      throw new NotFoundException("Siri board not found");
+    }
+
+    const journeys = await this.getSiriJourneysOrThrow();
+
+    return boards.map((board) => buildBoardFromSiriJourneys(board, journeys));
   }
 
   // --- crawls ----------------------------------------------------------

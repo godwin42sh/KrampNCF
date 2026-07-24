@@ -13,6 +13,7 @@ services:
       - SNCF_API_URL=${SNCF_API_URL:-https://api.sncf.com/v1}
       - SNCF_API_KEY=${SNCF_API_KEY}
       - SNCF_GTFSRT_URL=${SNCF_GTFSRT_URL:-https://proxy.transport.data.gouv.fr/resource/sncf-ter-gtfs-rt-trip-updates}
+      - SNCF_SIRI_ET_URL=${SNCF_SIRI_ET_URL:-}
       - SNCF_API_PRIM_URL=${SNCF_API_PRIM_URL:-}
       - SNCF_API_PRIM_KEY=${SNCF_API_PRIM_KEY:-}
       - SNCF_CRAWL_URL=${SNCF_CRAWL_URL:-}

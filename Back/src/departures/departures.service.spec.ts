@@ -7,6 +7,7 @@ import type { CrawlFlareService } from "../crawl/crawl-flare.service";
 import type { CrawlService } from "../crawl/crawl.service";
 import type { GtfsService } from "../gtfs/gtfs.service";
 import type { PrimService } from "../prim/prim.service";
+import type { SiriEtService } from "../siri-et/siri-et.service";
 import type { SncfService } from "../sncf/sncf.service";
 import { TrainType } from "../types/CrawlFlareDeparture";
 import { DeparturesService } from "./departures.service";
@@ -22,6 +23,7 @@ type Stubs = {
   sncf?: Partial<SncfService>;
   gtfs?: Partial<GtfsService>;
   prim?: Partial<PrimService>;
+  siriEt?: Partial<SiriEtService>;
   crawl?: Partial<CrawlService>;
   crawlFlare?: Partial<CrawlFlareService>;
   config?: Record<string, unknown>;
@@ -37,6 +39,7 @@ function makeService(stubs: Stubs = {}) {
     },
     gtfs: { getFeed: async () => null },
     prim: { getDepartures: async () => ({ isCached: false, data: [] }) },
+    siriEt: { getJourneys: async () => ({ isCached: false, data: [] }) },
     crawl: {
       getDeparturesSafe: async () => [],
       getDepartures: async () => ({ isCached: false, data: [] }),
@@ -49,6 +52,7 @@ function makeService(stubs: Stubs = {}) {
     { ...defaults.sncf, ...stubs.sncf } as SncfService,
     { ...defaults.gtfs, ...stubs.gtfs } as GtfsService,
     { ...defaults.prim, ...stubs.prim } as PrimService,
+    { ...defaults.siriEt, ...stubs.siriEt } as SiriEtService,
     { ...defaults.crawl, ...stubs.crawl } as CrawlService,
     { ...defaults.crawlFlare, ...stubs.crawlFlare } as CrawlFlareService,
   );

@@ -12,14 +12,21 @@ caches upstream responses in Redis, and documents itself with Swagger.
 
 | Source | Role | Status |
 |--------|------|--------|
-| **PRIM** (Île-de-France Mobilités SIRI Lite) | Realtime departures: time, delay, platform | ✅ **Default** |
+| **SIRI ET Lite** (national, transport.data.gouv.fr proxy) | Realtime departures with delay + platform, RER C **and** mainline Rémi, full calling pattern | ✅ **Recommended** |
+| **PRIM** (Île-de-France Mobilités SIRI Lite) | Realtime departures: time, delay, platform — RER C + partial TER | ✅ Working |
 | **GTFS-RT** (transport.data.gouv.fr proxy) | Realtime trip updates | ✅ Working |
 | **Navitia** (`api.sncf.com`) | Scheduled timetables (enriched by a realtime source) | ⚠️ Needs a valid API key |
 | **ter.sncf.com crawl** (direct + via FlareSolverr) | Legacy platform/departure scraper | ❌ Blocked by DataDome |
 
-The `crawlFlare` source is kept for reference but no longer works — SNCF put
-`garesetconnexions.sncf` behind DataDome, which FlareSolverr cannot pass. The
-default realtime method is therefore **`prim`**.
+**SIRI ET Lite** is the best source: keyless, national, and it carries the full
+calling list per train — so it covers both the RER C shuttle and the mainline
+Rémi (e.g. Paris-Austerlitz → Orléans calling at Étampes) that PRIM's IDFM feed
+doesn't publish, and it can tell definitively whether a train stops at Étampes.
+Its feed is a ~15 MB national XML fetched-and-cached like GTFS-RT.
+
+PRIM stays as a lighter IDFM-only source. The `crawlFlare` source is kept for
+reference but no longer works — SNCF put `garesetconnexions.sncf` behind
+DataDome, which FlareSolverr cannot pass.
 
 ## Quick start
 
@@ -46,7 +53,9 @@ and `deleted`.
 
 | Method & path | Description |
 |---------------|-------------|
-| `GET /departuresPrim/:id` | **Primary endpoint.** Realtime PRIM departures for a configured board (time + delay + dock). `?format=awtrix` returns a single Awtrix frame. |
+| `GET /departuresSiri/:id` | **Recommended.** Realtime SIRI ET departures for a board (delay + dock, RER C + Rémi). `?format=awtrix` returns a single Awtrix frame. |
+| `GET /departuresSiriByType/:type` | SIRI ET departures for every board of a given `type` (e.g. `train`). |
+| `GET /departuresPrim/:id` | Realtime PRIM departures for a configured board (time + delay + dock). `?format=awtrix` returns a single Awtrix frame. |
 | `GET /departuresPrimByType/:type` | PRIM departures for every board of a given `type` (e.g. `train`). |
 | `GET /departuresRT` | GTFS-RT realtime for both directions. |
 | `GET /departuresRT/:id` | GTFS-RT realtime for one line. |
