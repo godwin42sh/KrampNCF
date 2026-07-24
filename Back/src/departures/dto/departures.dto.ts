@@ -25,7 +25,7 @@ export const trainResponseSchema = z.object({
 export const departuresResponseSchema = z.object({
   title: z.string(),
   data: z.array(trainResponseSchema),
-  fetchType: z.enum(RT_FETCH_TYPES),
+  fetchType: z.enum([...RT_FETCH_TYPES, "siri"]),
   isCached: z
     .boolean()
     .meta({ description: "True when served from the Redis/in-memory cache" }),

@@ -166,6 +166,53 @@ export class DeparturesController {
     return this.departures.getPrimDeparturesByType(type);
   }
 
+  @Get("departuresSiri/:id")
+  @ApiOperation({
+    summary:
+      "Realtime departures from the national SIRI ET feed (delays + platforms, RER C and TER/Rémi)",
+  })
+  @ApiParam({ name: "id", type: Number, description: "Siri board id" })
+  @ApiOkResponse({
+    schema: {
+      oneOf: [
+        { $ref: getSchemaPath(DeparturesResponseDto) },
+        { $ref: getSchemaPath(AwtrixResponseDto) },
+      ],
+    },
+  })
+  @ApiNotFoundResponse({ description: "Siri board not found" })
+  @ApiServiceUnavailableResponse({
+    description: "SIRI ET feed could not be fetched",
+  })
+  async departuresSiri(
+    @Param("id", ParseIntPipe) id: number,
+    @Query() query: FormatQueryDto,
+  ): Promise<DeparturesResponse | AwtrixResponse> {
+    const departuresRes = await this.departures.getSiriBoard(id);
+
+    if (query.format === "awtrix") {
+      return this.departures.toAwtrix(departuresRes);
+    }
+
+    return departuresRes;
+  }
+
+  @Get("departuresSiriByType/:type")
+  @ApiOperation({
+    summary: "SIRI ET departures for every board of a given type",
+  })
+  @ApiParam({ name: "type", type: String, example: "train" })
+  @ApiOkResponse({ type: [DeparturesResponseDto] })
+  @ApiNotFoundResponse({ description: "Siri board not found" })
+  @ApiServiceUnavailableResponse({
+    description: "SIRI ET feed could not be fetched",
+  })
+  async departuresSiriByType(
+    @Param("type") type: string,
+  ): Promise<DeparturesResponse[]> {
+    return this.departures.getSiriBoardsByType(type);
+  }
+
   @Get("departuresCrawl/:id")
   @ApiOperation({
     summary: "Departures scraped from the ter.sncf.com schedule page",

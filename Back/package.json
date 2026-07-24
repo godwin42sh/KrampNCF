@@ -19,6 +19,7 @@
     "@nestjs/swagger": "^11.4.6",
     "date-fns": "^4.4.0",
     "date-fns-tz": "^3.2.0",
+    "fast-xml-parser": "^5.10.1",
     "gtfs-realtime-bindings": "^2.1.0",
     "ioredis": "^5.11.1",
     "nestjs-zod": "^5.4.0",

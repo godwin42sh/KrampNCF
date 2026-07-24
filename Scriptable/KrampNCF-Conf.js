@@ -23,6 +23,14 @@ const getUrlDeparturesPrimById = (idDeparture) => {
   return `https://${token}@sncf.krampflix.ovh/departuresPrim/${idDeparture}`;
 }
 
+const getUrlDeparturesSiriById = (idDeparture) => {
+  return `https://${token}@sncf.krampflix.ovh/departuresSiri/${idDeparture}`;
+}
+
+const getUrlDeparturesSiriByType = (type) => {
+  return `https://${token}@sncf.krampflix.ovh/departuresSiriByType/${type}`;
+}
+
 const getUrlDeparturesCrawlById = (id, type) => {
   const typeParam = type ? `?type=${type}` : '';
   return `https://${token}@sncf.krampflix.ovh/departuresCrawlFlare/${id}/${typeParam}`;
@@ -35,4 +43,6 @@ const getUrlDeparturesCrawl = (type) => {
 
 module.exports = { getUrlDepartures,  getUrlDeparturesCrawlById, getUrlDeparturesCrawl,
 getUrlDeparturesPrimById,
-getUrlDeparturesPrimByType, correspUrlTrain };
+getUrlDeparturesPrimByType,
+getUrlDeparturesSiriById,
+getUrlDeparturesSiriByType, correspUrlTrain };

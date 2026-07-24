@@ -4,6 +4,7 @@ import { CrawlFlareService } from "../crawl/crawl-flare.service";
 import { CrawlService } from "../crawl/crawl.service";
 import { GtfsService } from "../gtfs/gtfs.service";
 import { PrimService } from "../prim/prim.service";
+import { SiriEtService } from "../siri-et/siri-et.service";
 import { SncfService } from "../sncf/sncf.service";
 import { DeparturesController } from "./departures.controller";
 import { DeparturesService } from "./departures.service";
@@ -15,6 +16,7 @@ import { DeparturesService } from "./departures.service";
     SncfService,
     GtfsService,
     PrimService,
+    SiriEtService,
     CrawlService,
     CrawlFlareService,
   ],

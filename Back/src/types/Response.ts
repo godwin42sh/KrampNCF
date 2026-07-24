@@ -15,6 +15,7 @@ export type TrainResponse = {
 export type DeparturesResponse = {
   title: string;
   data: TrainResponse[];
-  fetchType: RTFetchType;
+  /** RTFetchType covers the scheduled-merge flows; "siri" is board-only. */
+  fetchType: RTFetchType | "siri";
   isCached: boolean;
 };

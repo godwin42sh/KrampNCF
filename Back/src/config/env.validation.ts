@@ -18,6 +18,7 @@ export const envSchema = z.object({
   SNCF_API_URL: z.string().min(1),
   SNCF_API_KEY: z.string().min(1),
   SNCF_GTFSRT_URL: z.string().min(1),
+  SNCF_SIRI_ET_URL: z.string().optional(),
 
   SNCF_API_PRIM_URL: z.string().optional(),
   SNCF_API_PRIM_KEY: z.string().optional(),

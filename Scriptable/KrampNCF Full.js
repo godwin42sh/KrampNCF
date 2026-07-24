@@ -35,9 +35,9 @@ const addStackFromReqData = (reqData, hours) => {
 	});
 }
 
-// PRIM realtime for every board (both directions: Étampes→Austerlitz and
-// Austerlitz→Étampes, each mixing RER C and TER).
-const url = Conf.getUrlDeparturesPrimByType('train');
+// SIRI ET realtime for every board (both directions: Étampes→Austerlitz and
+// Austerlitz→Étampes, each mixing RER C and mainline Rémi).
+const url = Conf.getUrlDeparturesSiriByType('train');
 const req = new Request(url);
 const reqData = await req.loadJSON();
 
