@@ -66,8 +66,10 @@ export class DeparturesService {
       iconTer: config.get<string>("AWTRIX_ICON_TER") ?? "59998",
       iconRer: config.get<string>("AWTRIX_ICON_RER") ?? "59997",
     };
+    // PRIM is the default realtime source: the ter.sncf.com crawls are
+    // behind DataDome and no longer reachable.
     this.defaultFetchMethod =
-      config.get<RTFetchType>("DEFAULT_FETCH_RT_METHOD") ?? "crawlFlare";
+      config.get<RTFetchType>("DEFAULT_FETCH_RT_METHOD") ?? "prim";
   }
 
   // --- lookups ---------------------------------------------------------

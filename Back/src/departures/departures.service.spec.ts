@@ -59,10 +59,10 @@ describe("lookups", () => {
     expect(() => makeService().findLineData(999)).toThrow(NotFoundException);
   });
 
-  it("resolveFetchType falls back to crawlFlare and honours the env default", () => {
-    expect(makeService().resolveFetchType()).toBe("crawlFlare");
-    expect(makeService().resolveFetchType("prim")).toBe("prim");
-    expect(makeService().resolveFetchType("bogus")).toBe("crawlFlare");
+  it("resolveFetchType falls back to prim and honours the env default", () => {
+    expect(makeService().resolveFetchType()).toBe("prim");
+    expect(makeService().resolveFetchType("crawlFlare")).toBe("crawlFlare");
+    expect(makeService().resolveFetchType("bogus")).toBe("prim");
     expect(
       makeService({
         config: { DEFAULT_FETCH_RT_METHOD: "gtfs" },
