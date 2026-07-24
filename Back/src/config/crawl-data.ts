@@ -6,11 +6,7 @@ const crawlsData: CrawlData[] = [
     title: "Étampes",
     flareId: "0087545137",
     destinationName: "Austerlitz",
-    stopToMatch: [
-      "Paris Austerlitz",
-      "Paris Austerlitz RER C",
-      "Musée d'Orsay",
-    ],
+    stopToMatch: ["Paris Austerlitz", "Paris Austerlitz RER C", "Musée d'Orsay"],
   },
   {
     id: 2,

@@ -6,14 +6,9 @@ const widget = new ListWidget();
 const SNCFModule = importModule("SNCFModule");
 const BGTransparent = importModule("BG-Transparent");
 const Conf = importModule("KrampNCF-Conf");
-const SendNotification
- = importModule("SendNotification");
 
 const dateNow = new Date();
 const hours = dateNow.getHours();
-const widgetParam = args.widgetParameter;
-const delaysOnly = widgetParam === 'delays';
-const idDeparture = !delaysOnly ? args.widgetParameter : false;
 
 if ((hours >= 7 && hours <= 8) || (hours >= 16 && hours <= 18)) {
     widget.refreshAfterDate = new Date(dateNow.getTime() + 1000 * 60 * 3);
@@ -24,32 +19,33 @@ else {
 
 widget.setPadding(5,5,5,5);
 
-const stack = widget.addStack();
-stack.layoutHorizontally();
-stack.topAlignContent();
-stack.setPadding(10, 0, 5, 0);
+const addStackFromReqData = (reqData, hours) => {
+    const stack = widget.addStack();
+	stack.layoutHorizontally();
+	stack.topAlignContent();
+	stack.setPadding(10, 0, 5, 0);
 
-// PRIM realtime for one direction (widget param: 1 = Étampes→Austerlitz,
-// 2 = Austerlitz→Étampes; defaults to 1).
-const url = Conf.getUrlDeparturesPrimById(idDeparture || 1);
+	if (hours >= 12) {
+		reqData.reverse();
+	}
+
+	reqData.forEach((train, index) => {
+		const isLast = index === reqData.length - 1;
+		SNCFModule.makeTrain(stack, train, isLast, false);
+	});
+}
+
+// PRIM realtime for every board (both directions: Étampes→Austerlitz and
+// Austerlitz→Étampes, each mixing RER C and TER).
+const url = Conf.getUrlDeparturesPrimByType('train');
 const req = new Request(url);
 const reqData = await req.loadJSON();
 
 if (Array.isArray(reqData)) {
-  if (hours >= 12) {
-    reqData.reverse();
-  }
-
-  reqData.forEach((train, index) => {
-    const isLast = index === reqData.length - 1;
-    SNCFModule.makeTrain(stack, train, isLast, delaysOnly);
-  });
-}
-else {
-  SNCFModule.makeTrain(stack, reqData, true, delaysOnly);
+  addStackFromReqData(reqData, hours);
 }
 
-// BGTransparent.setTransparentBackground(widget, config.widgetFamily, "top");
+// BGTransparent.setTransparentBackground(widget, "large", "bottom");// 
 // SNCFModule.setSNCFBackground(widget, 'light');
 
 widget.addSpacer();
