@@ -27,8 +27,8 @@ stack.layoutHorizontally();
 stack.topAlignContent();
 stack.setPadding(10, 0, 5, 0);
 
-// SIRI ET realtime for both directions, filtered to RER C only, with "RER"
-// injected into the board title ("Étampes - 24/07" -> "Étampes RER - 24/07").
+// SIRI ET realtime for both directions, filtered to RER C only, with a small
+// non-bold "RER" label shown in each board header (via typeLabel).
 const url = Conf.getUrlDeparturesSiriByType('train');
 const req = new Request(url);
 const reqData = await req.loadJSON();
@@ -36,7 +36,7 @@ const reqData = await req.loadJSON();
 const rerBoards = Array.isArray(reqData)
   ? reqData.map((board) => ({
       ...board,
-      title: board.title.replace(' - ', ' RER - '),
+      typeLabel: 'RER',
       data: board.data.filter((train) => train.trainType === 'RER'),
     }))
   : reqData;
