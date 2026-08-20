@@ -7,6 +7,7 @@ import {
   addDockToTrainResponses,
   filterScheduledDepartures,
   getDateFromQuery,
+  matchesStation,
   parseScheduledData,
   subtractHours,
 } from "./departures.utils";
@@ -134,5 +135,20 @@ describe("addDockToTrainResponses", () => {
     ]);
 
     expect(result[0].dock).toBeUndefined();
+  });
+});
+
+describe("matchesStation", () => {
+  it("ignores case and accents", () => {
+    expect(matchesStation("Étampes", "etampes")).toBe(true);
+    expect(matchesStation("Austerlitz", "AUSTERLITZ")).toBe(true);
+  });
+
+  it("matches substrings of the board name", () => {
+    expect(matchesStation("Gare d'Austerlitz", "austerlitz")).toBe(true);
+  });
+
+  it("rejects other stations", () => {
+    expect(matchesStation("Étampes", "austerlitz")).toBe(false);
   });
 });

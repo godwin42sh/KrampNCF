@@ -2,11 +2,12 @@ import "reflect-metadata";
 
 import { Logger, LogLevel } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
-import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
-import { ZodValidationPipe, cleanupOpenApiDoc } from "nestjs-zod";
+import { SwaggerModule } from "@nestjs/swagger";
+import { ZodValidationPipe } from "nestjs-zod";
 
 import { AppModule } from "./app.module";
 import { LOG_LEVELS } from "./config/env.validation";
+import { buildOpenApiDocument } from "./openapi";
 
 /**
  * LOG_LEVEL selects the most verbose level to emit (default: debug, so
@@ -27,18 +28,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ZodValidationPipe());
   app.enableShutdownHooks();
 
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle("KrampNCF API")
-    .setDescription(
-      "SNCF departures aggregation API — merges Navitia scheduled data with " +
-        "realtime sources (GTFS-RT, PRIM SIRI Lite, ter.sncf.com crawls).",
-    )
-    .setVersion("2.0.0")
-    .build();
-
-  const document = cleanupOpenApiDoc(
-    SwaggerModule.createDocument(app, swaggerConfig),
-  );
+  const document = buildOpenApiDocument(app);
   SwaggerModule.setup("docs", app, document, {
     jsonDocumentUrl: "docs-json",
   });

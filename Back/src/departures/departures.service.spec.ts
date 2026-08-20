@@ -206,6 +206,61 @@ describe("fetchAllLines", () => {
 
     expect(result).toHaveLength(linesData.length);
   });
+
+  it("keeps only the board departing from ?from=", async () => {
+    const service = makeService();
+
+    const result = await service.fetchAllLines(dateFrom, "crawlFlare", "etampes");
+
+    expect(result).toHaveLength(1);
+    expect(result[0].title).toStartWith("Étampes");
+  });
+
+  it("throws 404 when no board departs from the requested station", () => {
+    expect(
+      makeService().fetchAllLines(dateFrom, "crawlFlare", "lyon"),
+    ).rejects.toThrow(NotFoundException);
+  });
+});
+
+describe("getSiriBoardsByType", () => {
+  it("filters boards by departure station", async () => {
+    const service = makeService();
+
+    const result = await service.getSiriBoardsByType("train", "austerlitz");
+
+    expect(result).toHaveLength(1);
+    expect(result[0].title).toContain("Austerlitz");
+  });
+});
+
+describe("getCrawlDeparturesBoard", () => {
+  it("shapes the raw crawl as a departures board", async () => {
+    const service = makeService({
+      crawl: {
+        getDepartures: async () => ({
+          isCached: true,
+          data: [{ trainNumber: "111", dock: "3", departureTime: "12:00" }],
+        }),
+      },
+    });
+
+    const result = await service.getCrawlDeparturesBoard(1);
+
+    expect(result).toEqual({
+      title: lineData.title,
+      fetchType: "crawl",
+      isCached: true,
+      data: [
+        {
+          title: lineData.destinationName,
+          departureTime: "12:00",
+          trainNumber: "111",
+          dock: "3",
+        },
+      ],
+    });
+  });
 });
 
 describe("getCrawlFlareDepartures", () => {

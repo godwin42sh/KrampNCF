@@ -25,10 +25,21 @@ export const trainResponseSchema = z.object({
 export const departuresResponseSchema = z.object({
   title: z.string(),
   data: z.array(trainResponseSchema),
-  fetchType: z.enum([...RT_FETCH_TYPES, "siri"]),
+  fetchType: z.enum([...RT_FETCH_TYPES, "siri", "crawl"]),
   isCached: z
     .boolean()
     .meta({ description: "True when served from the Redis/in-memory cache" }),
+});
+
+export const crawlResponseSchema = z.object({
+  isCached: z.boolean(),
+  data: z.array(
+    z.object({
+      dock: z.string().meta({ description: "Platform/track" }),
+      trainNumber: z.string(),
+      departureTime: z.string().meta({ description: "Departure time (HH:mm)" }),
+    }),
+  ),
 });
 
 export const awtrixResponseSchema = z.object({
@@ -42,23 +53,42 @@ export class TrainResponseDto extends createZodDto(trainResponseSchema) {}
 export class DeparturesResponseDto extends createZodDto(
   departuresResponseSchema,
 ) {}
+export class CrawlResponseDto extends createZodDto(crawlResponseSchema) {}
 export class AwtrixResponseDto extends createZodDto(awtrixResponseSchema) {}
 
-export const dateFromQuerySchema = z.object({
-  dateFrom: z
-    .string()
-    .optional()
-    .meta({
-      description:
-        "Start of the departures window (ISO 8601). Defaults to one hour ago.",
-    }),
-});
+const dateFromField = z
+  .string()
+  .optional()
+  .meta({
+    description:
+      "Start of the departures window (ISO 8601). Defaults to one hour ago.",
+  });
+
+const fromField = z
+  .string()
+  .optional()
+  .meta({
+    description:
+      "Only boards departing from this station (case- and accent-insensitive, " +
+      'e.g. "etampes" or "austerlitz")',
+  });
 
 export const formatQuerySchema = z.object({
   format: z
     .enum(QUERY_FORMAT)
     .optional()
     .meta({ description: "Response format, defaults to json" }),
+});
+
+/** List routes: pick one departure station out of the returned boards. */
+export const listQuerySchema = formatQuerySchema.extend({ from: fromField });
+
+export const departuresByIdQuerySchema = formatQuerySchema.extend({
+  dateFrom: dateFromField,
+});
+
+export const departuresAllQuerySchema = departuresByIdQuerySchema.extend({
+  from: fromField,
 });
 
 export const crawlFlareQuerySchema = formatQuerySchema.extend({
@@ -68,6 +98,19 @@ export const crawlFlareQuerySchema = formatQuerySchema.extend({
     .meta({ description: "Filter departures by train type" }),
 });
 
-export class DateFromQueryDto extends createZodDto(dateFromQuerySchema) {}
+export const crawlFlareListQuerySchema = crawlFlareQuerySchema.extend({
+  from: fromField,
+});
+
 export class FormatQueryDto extends createZodDto(formatQuerySchema) {}
+export class ListQueryDto extends createZodDto(listQuerySchema) {}
+export class DeparturesByIdQueryDto extends createZodDto(
+  departuresByIdQuerySchema,
+) {}
+export class DeparturesAllQueryDto extends createZodDto(
+  departuresAllQuerySchema,
+) {}
 export class CrawlFlareQueryDto extends createZodDto(crawlFlareQuerySchema) {}
+export class CrawlFlareListQueryDto extends createZodDto(
+  crawlFlareListQuerySchema,
+) {}

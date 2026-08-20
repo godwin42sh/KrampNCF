@@ -33,6 +33,10 @@ const serviceStub = {
     fetchType: type,
   }),
   getPrimDepartures: async () => sampleResponse,
+  getSiriBoardsByType: async (_type: string, from?: string) =>
+    from ? [sampleResponse] : [sampleResponse, sampleResponse],
+  getCrawlDepartures: async () => ({ isCached: false, data: [] }),
+  getCrawlDeparturesBoard: async () => sampleResponse,
   toAwtrix: () => awtrixFrame,
 };
 
@@ -49,13 +53,21 @@ describe("DeparturesController", () => {
   });
 
   it("resolves the typeFetch route param", async () => {
-    const result = await controller.departuresById(1, {}, "prim");
+    const result = (await controller.departuresById(
+      1,
+      {},
+      "prim",
+    )) as DeparturesResponse;
 
     expect(result.fetchType).toBe("prim");
   });
 
   it("falls back to the default fetch type for unknown typeFetch values", async () => {
-    const result = await controller.departuresById(1, {}, "bogus");
+    const result = (await controller.departuresById(
+      1,
+      {},
+      "bogus",
+    )) as DeparturesResponse;
 
     expect(result.fetchType).toBe("crawlFlare");
   });
@@ -77,6 +89,34 @@ describe("DeparturesController", () => {
     const awtrix = await controller.departuresPrim(1, { format: "awtrix" });
 
     expect(json).toEqual(sampleResponse);
+    expect(awtrix).toEqual(awtrixFrame);
+  });
+
+  it("supports format=awtrix on the merged /departures/:id route", async () => {
+    const awtrix = await controller.departuresById(1, { format: "awtrix" });
+
+    expect(awtrix).toEqual(awtrixFrame);
+  });
+
+  it("passes ?from= through and maps each board when format=awtrix", async () => {
+    const all = await controller.departuresSiriByType("train", {});
+    const one = await controller.departuresSiriByType("train", {
+      from: "etampes",
+    });
+    const awtrix = await controller.departuresSiriByType("train", {
+      format: "awtrix",
+    });
+
+    expect(all).toHaveLength(2);
+    expect(one).toHaveLength(1);
+    expect(awtrix).toEqual([awtrixFrame, awtrixFrame]);
+  });
+
+  it("converts the raw crawl to an awtrix frame when format=awtrix", async () => {
+    const json = await controller.departuresCrawl(1, {});
+    const awtrix = await controller.departuresCrawl(1, { format: "awtrix" });
+
+    expect(json).toEqual({ isCached: false, data: [] });
     expect(awtrix).toEqual(awtrixFrame);
   });
 });

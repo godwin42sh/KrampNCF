@@ -79,3 +79,19 @@ export function addDockToTrainResponses(
     };
   });
 }
+
+function normalizeStation(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+/**
+ * Case- and accent-insensitive station match for the ?from= query param:
+ * "etampes" matches "Étampes", "austerlitz" matches "Gare d'Austerlitz".
+ */
+export function matchesStation(name: string, query: string): boolean {
+  return normalizeStation(name).includes(normalizeStation(query));
+}

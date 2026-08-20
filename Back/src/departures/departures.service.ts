@@ -33,6 +33,7 @@ import formatDeparturesAwtrix, {
 import {
   addDockToTrainResponses,
   filterScheduledDepartures,
+  matchesStation,
   parseScheduledData,
 } from "./departures.utils";
 import {
@@ -104,6 +105,28 @@ export class DeparturesService {
       : this.defaultFetchMethod;
   }
 
+  /**
+   * ?from= filter: keep only the boards departing from the given station.
+   * Applied before the upstream fetches so filtered-out boards cost nothing.
+   */
+  private filterByStation<T>(
+    items: T[],
+    from: string | undefined,
+    getName: (item: T) => string,
+  ): T[] {
+    if (!from) {
+      return items;
+    }
+
+    const filtered = items.filter((item) => matchesStation(getName(item), from));
+
+    if (!filtered.length) {
+      throw new NotFoundException(`No departure board from "${from}"`);
+    }
+
+    return filtered;
+  }
+
   toAwtrix(departuresResponse: DeparturesResponse): AwtrixResponse {
     return formatDeparturesAwtrix(departuresResponse, this.awtrixIcons);
   }
@@ -120,13 +143,21 @@ export class DeparturesService {
     return feedRes;
   }
 
-  async getRealtimeBothDirections(): Promise<DeparturesResponse[]> {
+  async getRealtimeBothDirections(from?: string): Promise<DeparturesResponse[]> {
+    const pairs = this.filterByStation(
+      [
+        [linesData[0], linesData[1]],
+        [linesData[1], linesData[0]],
+      ],
+      from,
+      ([lineFrom]) => lineFrom.title,
+    );
+
     const feedRes = await this.getFeedOrThrow();
 
-    const results = [
-      getDeparturesFromToRealtime(linesData[0], linesData[1], feedRes),
-      getDeparturesFromToRealtime(linesData[1], linesData[0], feedRes),
-    ];
+    const results = pairs.map(([lineFrom, lineTo]) =>
+      getDeparturesFromToRealtime(lineFrom, lineTo, feedRes),
+    );
 
     this.logger.debug(
       `realtime both directions: ${results.map((r) => `${r.title}=${r.data.length}`).join(", ")}` +
@@ -395,9 +426,12 @@ export class DeparturesService {
   async fetchAllLines(
     dateFrom: Date,
     type: RTFetchType,
+    from?: string,
   ): Promise<DeparturesResponse[]> {
+    const lines = this.filterByStation(linesData, from, (line) => line.title);
+
     const settled = await Promise.allSettled(
-      linesData.map((lineData) => this.fetchLine(lineData, dateFrom, type)),
+      lines.map((lineData) => this.fetchLine(lineData, dateFrom, type)),
     );
 
     return settled
@@ -418,15 +452,24 @@ export class DeparturesService {
     return parsePrimDeliveries(primData, deliveries);
   }
 
-  async getPrimDeparturesByType(type: string): Promise<DeparturesResponse[]> {
+  async getPrimDeparturesByType(
+    type: string,
+    from?: string,
+  ): Promise<DeparturesResponse[]> {
     const primData = primsData.filter((line) => line.type === type);
 
     if (!primData.length) {
       throw new NotFoundException("Prim data not found");
     }
 
+    const selected = this.filterByStation(
+      primData,
+      from,
+      (prim) => prim.departureName,
+    );
+
     const settled = await Promise.allSettled(
-      primData.map((prim) => this.getPrimDepartures(prim)),
+      selected.map((prim) => this.getPrimDepartures(prim)),
     );
 
     const departures = settled.reduce((acc: DeparturesResponse[], res) => {
@@ -477,22 +520,49 @@ export class DeparturesService {
     return res;
   }
 
-  async getSiriBoardsByType(type: string): Promise<DeparturesResponse[]> {
+  async getSiriBoardsByType(
+    type: string,
+    from?: string,
+  ): Promise<DeparturesResponse[]> {
     const boards = siriBoards.filter((board) => board.type === type);
 
     if (!boards.length) {
       throw new NotFoundException("Siri board not found");
     }
 
+    const selected = this.filterByStation(
+      boards,
+      from,
+      (board) => board.departureName,
+    );
+
     const journeys = await this.getSiriJourneysOrThrow();
 
-    return boards.map((board) => buildBoardFromSiriJourneys(board, journeys));
+    return selected.map((board) => buildBoardFromSiriJourneys(board, journeys));
   }
 
   // --- crawls ----------------------------------------------------------
 
   async getCrawlDepartures(id: number): Promise<IsCached<CrawlRes[]>> {
     return this.crawl.getDepartures(this.findLineData(id));
+  }
+
+  /** The raw dock crawl shaped as a departures board (for ?format=awtrix). */
+  async getCrawlDeparturesBoard(id: number): Promise<DeparturesResponse> {
+    const lineData = this.findLineData(id);
+    const crawlRes = await this.crawl.getDepartures(lineData);
+
+    return {
+      title: lineData.title,
+      fetchType: "crawl",
+      isCached: crawlRes.isCached,
+      data: crawlRes.data.map((crawl) => ({
+        title: lineData.destinationName,
+        departureTime: crawl.departureTime,
+        trainNumber: crawl.trainNumber,
+        dock: crawl.dock,
+      })),
+    };
   }
 
   async getCrawlFlareDepartures(
@@ -512,9 +582,16 @@ export class DeparturesService {
 
   async getAllCrawlFlareDepartures(
     trainType?: TrainType,
+    from?: string,
   ): Promise<DeparturesResponse[]> {
+    const selected = this.filterByStation(
+      crawlsData,
+      from,
+      (crawl) => crawl.title,
+    );
+
     return Promise.all(
-      crawlsData.map(async (crawlData) => {
+      selected.map(async (crawlData) => {
         const departures = await this.crawlFlare.getDepartures(crawlData);
 
         return parseCrawlFlareDeparturesWithTitle(
