@@ -21,20 +21,37 @@ import {
 import { RT_FETCH_TYPES } from "../config/env.validation";
 import type { CrawlRes } from "../types/CrawlRes";
 import type { IsCached } from "../types/IsCached";
+import type { QueryType } from "../types/QueryTypes";
 import type { DeparturesResponse } from "../types/Response";
 import { DeparturesService } from "./departures.service";
 import { getDateFromQuery } from "./departures.utils";
 import {
   AwtrixResponseDto,
+  CrawlFlareListQueryDto,
   CrawlFlareQueryDto,
-  DateFromQueryDto,
+  CrawlResponseDto,
+  DeparturesAllQueryDto,
+  DeparturesByIdQueryDto,
   DeparturesResponseDto,
   FormatQueryDto,
+  ListQueryDto,
 } from "./dto/departures.dto";
 import type { AwtrixResponse } from "./awtrix.utils";
 
+const BOARD_OR_AWTRIX = {
+  oneOf: [
+    { $ref: getSchemaPath(DeparturesResponseDto) },
+    { $ref: getSchemaPath(AwtrixResponseDto) },
+  ],
+};
+
+const BOARD_OR_AWTRIX_LIST = {
+  type: "array",
+  items: BOARD_OR_AWTRIX,
+};
+
 @ApiTags("departures")
-@ApiExtraModels(DeparturesResponseDto, AwtrixResponseDto)
+@ApiExtraModels(DeparturesResponseDto, AwtrixResponseDto, CrawlResponseDto)
 @Controller()
 export class DeparturesController {
   constructor(private readonly departures: DeparturesService) {}
@@ -49,30 +66,54 @@ export class DeparturesController {
     return parsed;
   }
 
+  private formatBoard(
+    board: DeparturesResponse,
+    format?: QueryType,
+  ): DeparturesResponse | AwtrixResponse {
+    return format === "awtrix" ? this.departures.toAwtrix(board) : board;
+  }
+
+  private formatBoards(
+    boards: DeparturesResponse[],
+    format?: QueryType,
+  ): (DeparturesResponse | AwtrixResponse)[] {
+    return format === "awtrix"
+      ? boards.map((board) => this.departures.toAwtrix(board))
+      : boards;
+  }
+
   @Get("departuresRT")
   @ApiOperation({
     summary: "Realtime departures for both configured directions (GTFS-RT)",
   })
-  @ApiOkResponse({ type: [DeparturesResponseDto] })
+  @ApiOkResponse({ schema: BOARD_OR_AWTRIX_LIST })
+  @ApiNotFoundResponse({ description: "No board departing from ?from=" })
   @ApiServiceUnavailableResponse({
     description: "GTFS-RT feed could not be fetched",
   })
-  async departuresRT(): Promise<DeparturesResponse[]> {
-    return this.departures.getRealtimeBothDirections();
+  async departuresRT(
+    @Query() query: ListQueryDto,
+  ): Promise<(DeparturesResponse | AwtrixResponse)[]> {
+    const boards = await this.departures.getRealtimeBothDirections(query.from);
+
+    return this.formatBoards(boards, query.format);
   }
 
   @Get("departuresRT/:id")
   @ApiOperation({ summary: "Realtime departures for one line (GTFS-RT)" })
   @ApiParam({ name: "id", type: Number, description: "Line id" })
-  @ApiOkResponse({ type: DeparturesResponseDto })
+  @ApiOkResponse({ schema: BOARD_OR_AWTRIX })
   @ApiNotFoundResponse({ description: "Line not found" })
   @ApiServiceUnavailableResponse({
     description: "GTFS-RT feed could not be fetched",
   })
   async departuresRTById(
     @Param("id", ParseIntPipe) id: number,
-  ): Promise<DeparturesResponse> {
-    return this.departures.getRealtimeForLine(id);
+    @Query() query: FormatQueryDto,
+  ): Promise<DeparturesResponse | AwtrixResponse> {
+    const board = await this.departures.getRealtimeForLine(id);
+
+    return this.formatBoard(board, query.format);
   }
 
   @Get("departures")
@@ -80,16 +121,20 @@ export class DeparturesController {
     summary:
       "Scheduled departures for all configured lines, merged with the default realtime source",
   })
-  @ApiOkResponse({ type: [DeparturesResponseDto] })
+  @ApiOkResponse({ schema: BOARD_OR_AWTRIX_LIST })
+  @ApiNotFoundResponse({ description: "No board departing from ?from=" })
   async departuresAll(
-    @Query() query: DateFromQueryDto,
-  ): Promise<DeparturesResponse[]> {
+    @Query() query: DeparturesAllQueryDto,
+  ): Promise<(DeparturesResponse | AwtrixResponse)[]> {
     const dateFrom = this.parseDateFrom(query.dateFrom);
 
-    return this.departures.fetchAllLines(
+    const boards = await this.departures.fetchAllLines(
       dateFrom,
       this.departures.resolveFetchType(),
+      query.from,
     );
+
+    return this.formatBoards(boards, query.format);
   }
 
   @Get(["departures/:id", "departures/:id/:typeFetch"])
@@ -104,34 +149,29 @@ export class DeparturesController {
     enum: RT_FETCH_TYPES,
     description: "Realtime source used to enrich the scheduled data",
   })
-  @ApiOkResponse({ type: DeparturesResponseDto })
+  @ApiOkResponse({ schema: BOARD_OR_AWTRIX })
   @ApiNotFoundResponse({ description: "Line not found" })
   async departuresById(
     @Param("id", ParseIntPipe) id: number,
-    @Query() query: DateFromQueryDto,
+    @Query() query: DeparturesByIdQueryDto,
     @Param("typeFetch") typeFetch?: string,
-  ): Promise<DeparturesResponse> {
+  ): Promise<DeparturesResponse | AwtrixResponse> {
     const lineData = this.departures.findLineData(id);
     const dateFrom = this.parseDateFrom(query.dateFrom);
 
-    return this.departures.fetchLine(
+    const board = await this.departures.fetchLine(
       lineData,
       dateFrom,
       this.departures.resolveFetchType(typeFetch),
     );
+
+    return this.formatBoard(board, query.format);
   }
 
   @Get("departuresPrim/:id")
   @ApiOperation({ summary: "Realtime departures from the PRIM SIRI Lite API" })
   @ApiParam({ name: "id", type: Number, description: "PRIM line id" })
-  @ApiOkResponse({
-    schema: {
-      oneOf: [
-        { $ref: getSchemaPath(DeparturesResponseDto) },
-        { $ref: getSchemaPath(AwtrixResponseDto) },
-      ],
-    },
-  })
+  @ApiOkResponse({ schema: BOARD_OR_AWTRIX })
   @ApiNotFoundResponse({ description: "Prim data not found / no departures" })
   @ApiServiceUnavailableResponse({ description: "PRIM API not configured" })
   async departuresPrim(
@@ -145,11 +185,7 @@ export class DeparturesController {
       throw new NotFoundException("No departures found");
     }
 
-    if (query.format === "awtrix") {
-      return this.departures.toAwtrix(departuresRes);
-    }
-
-    return departuresRes;
+    return this.formatBoard(departuresRes, query.format);
   }
 
   @Get("departuresPrimByType/:type")
@@ -157,13 +193,19 @@ export class DeparturesController {
     summary: "Realtime PRIM departures for every line of a given type",
   })
   @ApiParam({ name: "type", type: String, example: "TER" })
-  @ApiOkResponse({ type: [DeparturesResponseDto] })
+  @ApiOkResponse({ schema: BOARD_OR_AWTRIX_LIST })
   @ApiNotFoundResponse({ description: "Prim data not found" })
   @ApiServiceUnavailableResponse({ description: "PRIM API not configured" })
   async departuresPrimByType(
     @Param("type") type: string,
-  ): Promise<DeparturesResponse[]> {
-    return this.departures.getPrimDeparturesByType(type);
+    @Query() query: ListQueryDto,
+  ): Promise<(DeparturesResponse | AwtrixResponse)[]> {
+    const boards = await this.departures.getPrimDeparturesByType(
+      type,
+      query.from,
+    );
+
+    return this.formatBoards(boards, query.format);
   }
 
   @Get("departuresSiri/:id")
@@ -172,14 +214,7 @@ export class DeparturesController {
       "Realtime departures from the national SIRI ET feed (delays + platforms, RER C and TER/Rémi)",
   })
   @ApiParam({ name: "id", type: Number, description: "Siri board id" })
-  @ApiOkResponse({
-    schema: {
-      oneOf: [
-        { $ref: getSchemaPath(DeparturesResponseDto) },
-        { $ref: getSchemaPath(AwtrixResponseDto) },
-      ],
-    },
-  })
+  @ApiOkResponse({ schema: BOARD_OR_AWTRIX })
   @ApiNotFoundResponse({ description: "Siri board not found" })
   @ApiServiceUnavailableResponse({
     description: "SIRI ET feed could not be fetched",
@@ -190,11 +225,7 @@ export class DeparturesController {
   ): Promise<DeparturesResponse | AwtrixResponse> {
     const departuresRes = await this.departures.getSiriBoard(id);
 
-    if (query.format === "awtrix") {
-      return this.departures.toAwtrix(departuresRes);
-    }
-
-    return departuresRes;
+    return this.formatBoard(departuresRes, query.format);
   }
 
   @Get("departuresSiriByType/:type")
@@ -202,15 +233,18 @@ export class DeparturesController {
     summary: "SIRI ET departures for every board of a given type",
   })
   @ApiParam({ name: "type", type: String, example: "train" })
-  @ApiOkResponse({ type: [DeparturesResponseDto] })
+  @ApiOkResponse({ schema: BOARD_OR_AWTRIX_LIST })
   @ApiNotFoundResponse({ description: "Siri board not found" })
   @ApiServiceUnavailableResponse({
     description: "SIRI ET feed could not be fetched",
   })
   async departuresSiriByType(
     @Param("type") type: string,
-  ): Promise<DeparturesResponse[]> {
-    return this.departures.getSiriBoardsByType(type);
+    @Query() query: ListQueryDto,
+  ): Promise<(DeparturesResponse | AwtrixResponse)[]> {
+    const boards = await this.departures.getSiriBoardsByType(type, query.from);
+
+    return this.formatBoards(boards, query.format);
   }
 
   @Get("departuresCrawl/:id")
@@ -218,11 +252,26 @@ export class DeparturesController {
     summary: "Departures scraped from the ter.sncf.com schedule page",
   })
   @ApiParam({ name: "id", type: Number, description: "Line id" })
+  @ApiOkResponse({
+    schema: {
+      oneOf: [
+        { $ref: getSchemaPath(CrawlResponseDto) },
+        { $ref: getSchemaPath(AwtrixResponseDto) },
+      ],
+    },
+  })
   @ApiNotFoundResponse({ description: "Line not found" })
   @ApiServiceUnavailableResponse({ description: "Crawl not configured" })
   async departuresCrawl(
     @Param("id", ParseIntPipe) id: number,
-  ): Promise<IsCached<CrawlRes[]>> {
+    @Query() query: FormatQueryDto,
+  ): Promise<IsCached<CrawlRes[]> | AwtrixResponse> {
+    if (query.format === "awtrix") {
+      return this.departures.toAwtrix(
+        await this.departures.getCrawlDeparturesBoard(id),
+      );
+    }
+
     return this.departures.getCrawlDepartures(id);
   }
 
@@ -231,32 +280,20 @@ export class DeparturesController {
     summary:
       "Departures crawled through FlareSolverr for all configured stations",
   })
-  @ApiOkResponse({
-    schema: {
-      type: "array",
-      items: {
-        oneOf: [
-          { $ref: getSchemaPath(DeparturesResponseDto) },
-          { $ref: getSchemaPath(AwtrixResponseDto) },
-        ],
-      },
-    },
-  })
+  @ApiOkResponse({ schema: BOARD_OR_AWTRIX_LIST })
+  @ApiNotFoundResponse({ description: "No board departing from ?from=" })
   @ApiServiceUnavailableResponse({
     description: "FlareSolverr crawl not configured",
   })
   async departuresCrawlFlareAll(
-    @Query() query: CrawlFlareQueryDto,
+    @Query() query: CrawlFlareListQueryDto,
   ): Promise<(DeparturesResponse | AwtrixResponse)[]> {
-    const departures = await this.departures.getAllCrawlFlareDepartures(
+    const boards = await this.departures.getAllCrawlFlareDepartures(
       query.type,
+      query.from,
     );
 
-    if (query.format === "awtrix") {
-      return departures.map((departure) => this.departures.toAwtrix(departure));
-    }
-
-    return departures;
+    return this.formatBoards(boards, query.format);
   }
 
   @Get("departuresCrawlFlare/:id")
@@ -264,14 +301,7 @@ export class DeparturesController {
     summary: "Departures crawled through FlareSolverr for one station",
   })
   @ApiParam({ name: "id", type: Number, description: "Crawl data id" })
-  @ApiOkResponse({
-    schema: {
-      oneOf: [
-        { $ref: getSchemaPath(DeparturesResponseDto) },
-        { $ref: getSchemaPath(AwtrixResponseDto) },
-      ],
-    },
-  })
+  @ApiOkResponse({ schema: BOARD_OR_AWTRIX })
   @ApiNotFoundResponse({ description: "Crawl data not found" })
   @ApiServiceUnavailableResponse({
     description: "FlareSolverr crawl not configured",
@@ -285,10 +315,6 @@ export class DeparturesController {
       query.type,
     );
 
-    if (query.format === "awtrix") {
-      return this.departures.toAwtrix(departuresRes);
-    }
-
-    return departuresRes;
+    return this.formatBoard(departuresRes, query.format);
   }
 }

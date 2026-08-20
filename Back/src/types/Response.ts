@@ -15,7 +15,10 @@ export type TrainResponse = {
 export type DeparturesResponse = {
   title: string;
   data: TrainResponse[];
-  /** RTFetchType covers the scheduled-merge flows; "siri" is board-only. */
-  fetchType: RTFetchType | "siri";
+  /**
+   * RTFetchType covers the scheduled-merge flows; "siri" is board-only,
+   * "crawl" is the raw ter.sncf.com dock crawl.
+   */
+  fetchType: RTFetchType | "siri" | "crawl";
   isCached: boolean;
 };

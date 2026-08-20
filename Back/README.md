@@ -58,11 +58,17 @@ fetchType, isCached }`; a `TrainResponse` carries `departureTime`, optional
 `arrivalTime`, `delay` (minutes), `dock` (platform), `trainNumber`, `trainType`,
 and `deleted`.
 
+Every route accepts `?format=awtrix` to get Awtrix frame(s) instead of JSON
+boards (list routes return one frame per board). Routes returning several
+boards also accept `?from=<station>` to keep only the board departing from
+that station — case- and accent-insensitive, e.g. `?from=etampes` or
+`?from=austerlitz` (`404` when nothing matches).
+
 | Method & path | Description |
 |---------------|-------------|
-| `GET /departuresSiri/:id` | **Recommended.** Realtime SIRI ET departures for a board (delay + dock, RER C + Rémi). `?format=awtrix` returns a single Awtrix frame. |
+| `GET /departuresSiri/:id` | **Recommended.** Realtime SIRI ET departures for a board (delay + dock, RER C + Rémi). |
 | `GET /departuresSiriByType/:type` | SIRI ET departures for every board of a given `type` (e.g. `train`). |
-| `GET /departuresPrim/:id` | Realtime PRIM departures for a configured board (time + delay + dock). `?format=awtrix` returns a single Awtrix frame. |
+| `GET /departuresPrim/:id` | Realtime PRIM departures for a configured board (time + delay + dock). |
 | `GET /departuresPrimByType/:type` | PRIM departures for every board of a given `type` (e.g. `train`). |
 | `GET /departuresRT` | GTFS-RT realtime for both directions. |
 | `GET /departuresRT/:id` | GTFS-RT realtime for one line. |
