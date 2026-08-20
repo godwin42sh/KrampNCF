@@ -38,8 +38,8 @@ bun run dev      # watch mode
 The API listens on `PORT` (default `80`). Interactive docs: **`/docs`**
 (Swagger UI), raw spec: **`/docs-json`**.
 
-To generate the spec offline (writes `openapi.json` and `swagger.json` to
-this directory, no server or env vars needed):
+To generate the spec offline (writes `openapi.json` to this directory, no
+server or env vars needed):
 
 ```bash
 bun run openapi

@@ -8,8 +8,8 @@ import { NestFactory } from "@nestjs/core";
 import { buildOpenApiDocument } from "./openapi";
 
 /**
- * Writes openapi.json and swagger.json to the Back/ root without starting
- * the HTTP server: `bun run openapi`.
+ * Writes openapi.json to the Back/ root without starting the HTTP server:
+ * `bun run openapi`.
  *
  * The required env vars only gate runtime features (Redis is lazy-connect,
  * upstream APIs are called per request), so placeholders are enough to
@@ -39,13 +39,10 @@ async function generate() {
 
   try {
     const json = `${JSON.stringify(buildOpenApiDocument(app), null, 2)}\n`;
+    const path = resolve(import.meta.dir, "..", "openapi.json");
 
-    for (const filename of ["openapi.json", "swagger.json"]) {
-      const path = resolve(import.meta.dir, "..", filename);
-
-      writeFileSync(path, json);
-      console.log(`Wrote ${path}`);
-    }
+    writeFileSync(path, json);
+    console.log(`Wrote ${path}`);
   } finally {
     await app.close();
   }
