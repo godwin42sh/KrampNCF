@@ -1,0 +1,699 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/departuresRT": {
+      "get": {
+        "operationId": "DeparturesController_departuresRT",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeparturesResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "GTFS-RT feed could not be fetched"
+          }
+        },
+        "summary": "Realtime departures for both configured directions (GTFS-RT)",
+        "tags": [
+          "departures"
+        ]
+      }
+    },
+    "/departuresRT/{id}": {
+      "get": {
+        "operationId": "DeparturesController_departuresRTById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Line id",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeparturesResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Line not found"
+          },
+          "503": {
+            "description": "GTFS-RT feed could not be fetched"
+          }
+        },
+        "summary": "Realtime departures for one line (GTFS-RT)",
+        "tags": [
+          "departures"
+        ]
+      }
+    },
+    "/departures": {
+      "get": {
+        "operationId": "DeparturesController_departuresAll",
+        "parameters": [
+          {
+            "name": "dateFrom",
+            "required": false,
+            "in": "query",
+            "description": "Start of the departures window (ISO 8601). Defaults to one hour ago.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeparturesResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Scheduled departures for all configured lines, merged with the default realtime source",
+        "tags": [
+          "departures"
+        ]
+      }
+    },
+    "/departures/{id}": {
+      "get": {
+        "operationId": "DeparturesController_departuresById[0]",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Line id",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "dateFrom",
+            "required": false,
+            "in": "query",
+            "description": "Start of the departures window (ISO 8601). Defaults to one hour ago.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "typeFetch",
+            "required": false,
+            "in": "path",
+            "description": "Realtime source used to enrich the scheduled data",
+            "schema": {
+              "enum": [
+                "gtfs",
+                "prim",
+                "crawlFlare"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeparturesResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Line not found"
+          }
+        },
+        "summary": "Scheduled departures for one line, merged with a realtime source",
+        "tags": [
+          "departures"
+        ]
+      }
+    },
+    "/departures/{id}/{typeFetch}": {
+      "get": {
+        "operationId": "DeparturesController_departuresById[1]",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Line id",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "dateFrom",
+            "required": false,
+            "in": "query",
+            "description": "Start of the departures window (ISO 8601). Defaults to one hour ago.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "typeFetch",
+            "required": false,
+            "in": "path",
+            "description": "Realtime source used to enrich the scheduled data",
+            "schema": {
+              "enum": [
+                "gtfs",
+                "prim",
+                "crawlFlare"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeparturesResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Line not found"
+          }
+        },
+        "summary": "Scheduled departures for one line, merged with a realtime source",
+        "tags": [
+          "departures"
+        ]
+      }
+    },
+    "/departuresPrim/{id}": {
+      "get": {
+        "operationId": "DeparturesController_departuresPrim",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "PRIM line id",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "format",
+            "required": false,
+            "in": "query",
+            "description": "Response format, defaults to json",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "json",
+                "awtrix"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/DeparturesResponseDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AwtrixResponseDto"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Prim data not found / no departures"
+          },
+          "503": {
+            "description": "PRIM API not configured"
+          }
+        },
+        "summary": "Realtime departures from the PRIM SIRI Lite API",
+        "tags": [
+          "departures"
+        ]
+      }
+    },
+    "/departuresPrimByType/{type}": {
+      "get": {
+        "operationId": "DeparturesController_departuresPrimByType",
+        "parameters": [
+          {
+            "name": "type",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "TER",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeparturesResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Prim data not found"
+          },
+          "503": {
+            "description": "PRIM API not configured"
+          }
+        },
+        "summary": "Realtime PRIM departures for every line of a given type",
+        "tags": [
+          "departures"
+        ]
+      }
+    },
+    "/departuresSiri/{id}": {
+      "get": {
+        "operationId": "DeparturesController_departuresSiri",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Siri board id",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "format",
+            "required": false,
+            "in": "query",
+            "description": "Response format, defaults to json",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "json",
+                "awtrix"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/DeparturesResponseDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AwtrixResponseDto"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Siri board not found"
+          },
+          "503": {
+            "description": "SIRI ET feed could not be fetched"
+          }
+        },
+        "summary": "Realtime departures from the national SIRI ET feed (delays + platforms, RER C and TER/Rémi)",
+        "tags": [
+          "departures"
+        ]
+      }
+    },
+    "/departuresSiriByType/{type}": {
+      "get": {
+        "operationId": "DeparturesController_departuresSiriByType",
+        "parameters": [
+          {
+            "name": "type",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "train",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeparturesResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Siri board not found"
+          },
+          "503": {
+            "description": "SIRI ET feed could not be fetched"
+          }
+        },
+        "summary": "SIRI ET departures for every board of a given type",
+        "tags": [
+          "departures"
+        ]
+      }
+    },
+    "/departuresCrawl/{id}": {
+      "get": {
+        "operationId": "DeparturesController_departuresCrawl",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Line id",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "404": {
+            "description": "Line not found"
+          },
+          "503": {
+            "description": "Crawl not configured"
+          }
+        },
+        "summary": "Departures scraped from the ter.sncf.com schedule page",
+        "tags": [
+          "departures"
+        ]
+      }
+    },
+    "/departuresCrawlFlare": {
+      "get": {
+        "operationId": "DeparturesController_departuresCrawlFlareAll",
+        "parameters": [
+          {
+            "name": "format",
+            "required": false,
+            "in": "query",
+            "description": "Response format, defaults to json",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "json",
+                "awtrix"
+              ]
+            }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "description": "Filter departures by train type",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "Intercités",
+                "Intercités de nuit",
+                "OUIGO Train Classique",
+                "RER",
+                "TER",
+                "Rémi",
+                "TRANSILIEN"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "$ref": "#/components/schemas/DeparturesResponseDto"
+                      },
+                      {
+                        "$ref": "#/components/schemas/AwtrixResponseDto"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "FlareSolverr crawl not configured"
+          }
+        },
+        "summary": "Departures crawled through FlareSolverr for all configured stations",
+        "tags": [
+          "departures"
+        ]
+      }
+    },
+    "/departuresCrawlFlare/{id}": {
+      "get": {
+        "operationId": "DeparturesController_departuresCrawlFlareById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Crawl data id",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "format",
+            "required": false,
+            "in": "query",
+            "description": "Response format, defaults to json",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "json",
+                "awtrix"
+              ]
+            }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "description": "Filter departures by train type",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "Intercités",
+                "Intercités de nuit",
+                "OUIGO Train Classique",
+                "RER",
+                "TER",
+                "Rémi",
+                "TRANSILIEN"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/DeparturesResponseDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AwtrixResponseDto"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Crawl data not found"
+          },
+          "503": {
+            "description": "FlareSolverr crawl not configured"
+          }
+        },
+        "summary": "Departures crawled through FlareSolverr for one station",
+        "tags": [
+          "departures"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "KrampNCF API",
+    "description": "SNCF departures aggregation API — merges Navitia scheduled data with realtime sources (GTFS-RT, PRIM SIRI Lite, ter.sncf.com crawls).",
+    "version": "2.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "schemas": {
+      "DeparturesResponseDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "Destination name"
+                },
+                "departureTime": {
+                  "type": "string",
+                  "description": "Departure time (HH:mm)"
+                },
+                "arrivalTime": {
+                  "description": "Arrival time (HH:mm)",
+                  "type": "string"
+                },
+                "delay": {
+                  "description": "Delay in minutes",
+                  "type": "number"
+                },
+                "deleted": {
+                  "description": "True when the train is cancelled",
+                  "type": "boolean"
+                },
+                "trainNumber": {
+                  "type": "string"
+                },
+                "trainType": {
+                  "description": "TER, RER, ...",
+                  "type": "string"
+                },
+                "dock": {
+                  "description": "Platform/track",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "title",
+                "departureTime"
+              ]
+            }
+          },
+          "fetchType": {
+            "type": "string",
+            "enum": [
+              "gtfs",
+              "prim",
+              "crawlFlare",
+              "siri"
+            ]
+          },
+          "isCached": {
+            "type": "boolean",
+            "description": "True when served from the Redis/in-memory cache"
+          }
+        },
+        "required": [
+          "title",
+          "data",
+          "fetchType",
+          "isCached"
+        ]
+      },
+      "AwtrixResponseDto": {
+        "type": "object",
+        "properties": {
+          "icon": {
+            "type": "string",
+            "description": "Awtrix icon id"
+          },
+          "color": {
+            "type": "string",
+            "description": "Text color (hex)"
+          },
+          "pos": {
+            "type": "number"
+          },
+          "text": {
+            "type": "string",
+            "description": "Displayed text (departure time)"
+          }
+        },
+        "required": [
+          "icon",
+          "color",
+          "pos",
+          "text"
+        ]
+      }
+    }
+  }
+}
