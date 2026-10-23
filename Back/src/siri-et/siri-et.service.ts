@@ -158,6 +158,9 @@ export class SiriEtService {
       expectedDepartureTime: str(call.ExpectedDepartureTime),
       arrivalPlatform: str(call.ArrivalPlatformName),
       departurePlatform: str(call.DeparturePlatformName),
+      cancelled:
+        String(call.Cancellation) === "true" ||
+        str(call.DepartureStatus) === "cancelled",
     };
   }
 }

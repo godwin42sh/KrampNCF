@@ -108,13 +108,15 @@ const makeTrainDock = (scheduleStack, dock) => {
   dockText.font = new Font(fontTextLight, 14);
 }
 
-// One notification per (train, delay value), only for delays >= 5 min.
-// State lives in Keychain (reset daily) so a dismissed notification never
-// comes back, but a changed delay notifies again. Scriptable cannot observe
-// dismissals, so "dismissed" = "already notified once".
-const notifyDelayOnce = (data, station) => {
+// One notification per train per issue (delay value >= 5 min, or
+// cancellation). State lives in Keychain (reset daily) so a dismissed
+// notification never comes back, but a changed delay — or a train going from
+// late to cancelled — notifies again. Scriptable cannot observe dismissals,
+// so "dismissed" = "already notified once".
+const notifyTrainOnce = (data, station) => {
   const delay = data.delay ?? data.departure?.delay;
-  if (!delay || delay < NOTIF_DELAY_MIN) return;
+  const cancelled = data.deleted === true;
+  if (!cancelled && (!delay || delay < NOTIF_DELAY_MIN)) return;
 
   let state = {};
   try {
@@ -125,14 +127,17 @@ const notifyDelayOnce = (data, station) => {
 
   const time = data.departureTime ?? data.departure?.time;
   const trainKey = `${station}-${data.trainNumber || data.title}-${time}`;
-  if (state.trains[trainKey] === delay) return;
+  const value = cancelled ? "cancelled" : delay;
+  if (state.trains[trainKey] === value) return;
 
-  state.trains[trainKey] = delay;
+  state.trains[trainKey] = value;
   Keychain.set(KEYCHAIN_KEY, JSON.stringify(state));
 
   const notif = new Notification();
   notif.title = station;
-  notif.body = `${time} +${delay} (${data.title})`;
+  notif.body = cancelled
+    ? `${time} supprimé (${data.title})`
+    : `${time} +${delay} (${data.title})`;
   if (Conf.correspUrlTrain[station]) notif.openURL = Conf.correspUrlTrain[station];
   return notif.schedule();
 }
@@ -145,17 +150,26 @@ const makeTrainTime = (scheduleStack, data, trainTitle) => {
 };
 
 	let timeText = departureSanitized.time;
-  
+
     const time = scheduleStack.addText(timeText);
   time.font = new Font(fontTextBold, 15);
 
 //   time.minimumScaleFactor = 0.9;
   time.lineLimit = 1;
 
+  notifyTrainOnce(data, trainTitle);
+
+  if (data.deleted) {
+    time.textColor = new Color("9A9A9A");
+    const cancelText = scheduleStack.addText(" ✕");
+    cancelText.font = new Font(fontTextBold, 13);
+    cancelText.textColor = Color.red();
+    return;
+  }
+
   if (departureSanitized.delay) {
-    notifyDelayOnce(data, trainTitle);
     const delayText = scheduleStack.addText(`+${departureSanitized.delay}`);
-    color = Color.red();
+    const color = Color.red();
     time.textColor = color;
     delayText.textColor = color;
     delayText.font = new Font(fontTextBold, 10);
@@ -245,4 +259,4 @@ const makeTrain = (stack, train, isLast, delaysOnly = false, limit = 5) => {
   }
 }
 
-module.exports = { makeTrain, setSNCFBackground, filterOnlyDelays, notifyDelayOnce };
+module.exports = { makeTrain, setSNCFBackground, filterOnlyDelays, notifyTrainOnce };
