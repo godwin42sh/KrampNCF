@@ -2,8 +2,9 @@
 // These must be at the very top of the file. Do not edit.
 // icon-color: yellow; icon-glyph: magic;
 const Conf = importModule("KrampNCF-Conf");
-const SendNotification
- = importModule("SendNotification");
+
+const NOTIF_DELAY_MIN = 5;
+const KEYCHAIN_KEY = "KrampNCF-notified-delays";
 
 const fontText = "Avenir-Medium";
 const fontTextLight = "Avenir-Light";
@@ -107,10 +108,33 @@ const makeTrainDock = (scheduleStack, dock) => {
   dockText.font = new Font(fontTextLight, 14);
 }
 
-const sendNotifWhenDelay = (data, departure, trainTitle) => {
-  const notifText = departure.time + ' +' + departure.delay;
+// One notification per (train, delay value), only for delays >= 5 min.
+// State lives in Keychain (reset daily) so a dismissed notification never
+// comes back, but a changed delay notifies again. Scriptable cannot observe
+// dismissals, so "dismissed" = "already notified once".
+const notifyDelayOnce = (data, station) => {
+  const delay = data.delay ?? data.departure?.delay;
+  if (!delay || delay < NOTIF_DELAY_MIN) return;
 
-  SendNotification.sendUniqNotif(data.title, notifText, Conf.correspUrlTrain[trainTitle]);
+  let state = {};
+  try {
+    state = JSON.parse(Keychain.get(KEYCHAIN_KEY));
+  } catch (e) {}
+  const today = new Date().toDateString();
+  if (state.date !== today) state = { date: today, trains: {} };
+
+  const time = data.departureTime ?? data.departure?.time;
+  const trainKey = `${station}-${data.trainNumber || data.title}-${time}`;
+  if (state.trains[trainKey] === delay) return;
+
+  state.trains[trainKey] = delay;
+  Keychain.set(KEYCHAIN_KEY, JSON.stringify(state));
+
+  const notif = new Notification();
+  notif.title = station;
+  notif.body = `${time} +${delay} (${data.title})`;
+  if (Conf.correspUrlTrain[station]) notif.openURL = Conf.correspUrlTrain[station];
+  return notif.schedule();
 }
 
 const makeTrainTime = (scheduleStack, data, trainTitle) => {
@@ -129,7 +153,7 @@ const makeTrainTime = (scheduleStack, data, trainTitle) => {
   time.lineLimit = 1;
 
   if (departureSanitized.delay) {
-    sendNotifWhenDelay(data, departureSanitized, trainTitle);
+    notifyDelayOnce(data, trainTitle);
     const delayText = scheduleStack.addText(`+${departureSanitized.delay}`);
     color = Color.red();
     time.textColor = color;
@@ -221,4 +245,4 @@ const makeTrain = (stack, train, isLast, delaysOnly = false, limit = 5) => {
   }
 }
 
-module.exports = { makeTrain, setSNCFBackground, filterOnlyDelays };
+module.exports = { makeTrain, setSNCFBackground, filterOnlyDelays, notifyDelayOnce };

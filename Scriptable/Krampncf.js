@@ -6,8 +6,6 @@ const widget = new ListWidget();
 const SNCFModule = importModule("SNCFModule");
 const BGTransparent = importModule("BG-Transparent");
 const Conf = importModule("KrampNCF-Conf");
-const SendNotification
- = importModule("SendNotification");
 
 const dateNow = new Date();
 const hours = dateNow.getHours();
