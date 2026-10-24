@@ -30,11 +30,18 @@ const minutesOfDay = (hhmm) => {
 };
 const nowMinutes = dateNow.getHours() * 60 + dateNow.getMinutes();
 
-const nextTrain = (board.data || []).find(
-  (t) => !t.deleted && minutesOfDay(t.departureTime) + (t.delay || 0) >= nowMinutes
+const upcoming = (board.data || []).filter(
+  (t) => minutesOfDay(t.departureTime) + (t.delay || 0) >= nowMinutes
 );
+const nextTrain = upcoming.find((t) => !t.deleted);
 
 const station = (board.title || "").split(" - ")[0];
+
+// The widget shows the next running train, but a cancelled upcoming train is
+// exactly what a notification is for.
+for (const t of upcoming.filter((t) => t.deleted)) {
+  await SNCFModule.notifyTrainOnce(t, station);
+}
 
 const titleText = widget.addText(station);
 titleText.font = Font.mediumSystemFont(12);
@@ -67,7 +74,7 @@ if (!nextTrain) {
   dest.font = Font.systemFont(12);
   dest.lineLimit = 1;
 
-  await SNCFModule.notifyDelayOnce(nextTrain, station);
+  await SNCFModule.notifyTrainOnce(nextTrain, station);
 }
 
 if (!config.runsInWidget) {

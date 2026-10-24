@@ -80,7 +80,7 @@ export function buildBoardFromSiriJourneys(
       train.dock = dock;
     }
 
-    if (journey.cancelled) {
+    if (journey.cancelled || fromCall.cancelled) {
       train.deleted = true;
     }
 

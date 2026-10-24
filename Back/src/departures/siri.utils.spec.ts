@@ -133,4 +133,18 @@ describe("buildBoardFromSiriJourneys", () => {
 
     expect(res.data[0].deleted).toBe(true);
   });
+
+  it("flags a journey whose departure call is cancelled as deleted", () => {
+    const calls = [
+      { ...rerCsouth.calls[0], cancelled: true },
+      rerCsouth.calls[1],
+    ];
+    const res = buildBoardFromSiriJourneys(
+      austerlitzBoard,
+      { isCached: false, data: [{ ...rerCsouth, calls }] },
+      NOW,
+    );
+
+    expect(res.data[0].deleted).toBe(true);
+  });
 });

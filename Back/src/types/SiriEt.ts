@@ -9,6 +9,8 @@ export interface SiriCall {
   expectedDepartureTime?: string;
   arrivalPlatform?: string;
   departurePlatform?: string;
+  /** Call-level cancellation (stop skipped / departure cancelled). */
+  cancelled?: boolean;
 }
 
 /** A vehicle journey extracted from the national SIRI ET Lite feed. */
