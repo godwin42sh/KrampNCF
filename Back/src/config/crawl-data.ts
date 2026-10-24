@@ -13,7 +13,7 @@ const crawlsData: CrawlData[] = [
     title: "Austerlitz",
     flareId: "0087547000",
     destinationName: "Étampes",
-    stopToMatch: ["Étampes", "Saint-Martin d'Étampes", "Orléans"],
+    stopToMatch: ["Étampes", "St-Martin d'Étampes", "Orléans"],
   },
 ];
 

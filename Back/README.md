@@ -16,7 +16,8 @@ caches upstream responses in Redis, and documents itself with Swagger.
 | **PRIM** (Île-de-France Mobilités SIRI Lite) | Realtime departures: time, delay, platform — RER C + partial TER | ✅ Working |
 | **GTFS-RT** (transport.data.gouv.fr proxy) | Realtime trip updates | ✅ Working |
 | **Navitia** (`api.sncf.com`) | Scheduled timetables (enriched by a realtime source) | ⚠️ Needs a valid API key |
-| **ter.sncf.com crawl** (direct + via FlareSolverr) | Legacy platform/departure scraper | ❌ Blocked by DataDome |
+| **garesetconnexions.sncf schedule-table** (`crawlFlare`) | Station departure board JSON: time, delay, platform, cancellations | ✅ Working (direct fetch, no key) |
+| **ter.sncf.com crawl** (direct) | Legacy platform/departure scraper | ❌ Blocked by DataDome |
 
 **SIRI ET Lite** is the best source: keyless, national, and it carries the full
 calling list per train — so it covers both the RER C shuttle and the mainline
@@ -24,9 +25,11 @@ Rémi (e.g. Paris-Austerlitz → Orléans calling at Étampes) that PRIM's IDFM 
 doesn't publish, and it can tell definitively whether a train stops at Étampes.
 Its feed is a ~15 MB national XML fetched-and-cached like GTFS-RT.
 
-PRIM stays as a lighter IDFM-only source. The `crawlFlare` source is kept for
-reference but no longer works — SNCF put `garesetconnexions.sncf` behind
-DataDome, which FlareSolverr cannot pass.
+PRIM stays as a lighter IDFM-only source. The `crawlFlare` source (named for
+the FlareSolverr proxy it once needed) now fetches
+`garesetconnexions.sncf/schedule-table` directly: DataDome blocks FlareSolverr's
+headless browser, but the schedule-table API answers plain HTTP GETs
+unchallenged, so FlareSolverr is no longer used.
 
 ## Quick start
 
@@ -75,7 +78,7 @@ that station — case- and accent-insensitive, e.g. `?from=etampes` or
 | `GET /departures` | Scheduled (Navitia) departures for all lines, merged with the default realtime source. |
 | `GET /departures/:id/:typeFetch?` | Scheduled departures for one line; `typeFetch` ∈ `gtfs \| prim \| crawlFlare` overrides the source. |
 | `GET /departuresCrawl/:id` | Legacy ter.sncf.com scrape (see status above). |
-| `GET /departuresCrawlFlare` · `/departuresCrawlFlare/:id` | Legacy FlareSolverr scrape (blocked by DataDome). |
+| `GET /departuresCrawlFlare` · `/departuresCrawlFlare/:id` | Station departure boards from the garesetconnexions schedule-table API. |
 
 Errors use standard HTTP codes: `400` (bad `dateFrom`/query), `404` (unknown
 id / no departures), `503` (a required upstream is unconfigured or unreachable).
@@ -102,8 +105,8 @@ copy the repo-root `.env.example` to `.env` — Compose reads it automatically.
 | `PORT` | HTTP port (default `80`) |
 | `SNCF_API_PRIM_URL`, `SNCF_API_PRIM_KEY` | PRIM SIRI Lite base URL + key |
 | `SNCF_CRAWL_URL` | ter.sncf.com base URL (legacy crawl) |
-| `FLARE_API_URL`, `SNCF_CRAWL_FLARE_URL` | FlareSolverr endpoint + SNCF base (legacy) |
-| `REDIS_CRAWL_EXPIRE` | Crawl cache TTL in seconds (default `300`) |
+| `SNCF_CRAWL_FLARE_URL` | garesetconnexions schedule-table base URL (compose defaults it) |
+| `REDIS_CRAWL_EXPIRE` | ter.sncf.com crawl cache TTL in seconds (default `300`); the schedule-table crawl uses a randomized 4–6 min TTL and only runs 7h–22h Paris time |
 | `DEFAULT_FETCH_RT_METHOD` | `prim` (default) \| `gtfs` \| `crawlFlare` |
 | `AWTRIX_ICON_TER`, `AWTRIX_ICON_RER` | Awtrix icon ids |
 | `LOG_LEVEL` | `error` \| `warn` \| `log` \| `debug` (default) \| `verbose` |

@@ -10,132 +10,161 @@ import type { CrawlData } from "../types/CrawlData";
 import type { CrawlFlareDeparture } from "../types/CrawlFlareDeparture";
 import type { IsCached } from "../types/IsCached";
 
-type BodyFlare = {
-  cmd: string;
-  url: string;
-  maxTimeout: number;
-};
-
 type DataType = "Departures" | "Arrivals";
 
-const REGEX_MATCH_JSON = /(?:.*)(\[\{.*])(?:<\/pre>.*)/;
+// At most one upstream request per cache window; the TTL is randomized so
+// the traffic pattern looks organic rather than a fixed-interval poller.
+const CACHE_TTL_MIN_SECONDS = 4 * 60;
+const CACHE_TTL_MAX_SECONDS = 6 * 60;
 
-const EMPTY_CACHE_TTL_SECONDS = 30;
+// Failures stick only briefly so the next call retries soon instead of
+// blanking the source for a whole cache window.
+const ERROR_CACHE_TTL_SECONDS = 30;
+
+// Circuit breaker: after this many consecutive failures (empty results are
+// not failures), stop crawling for a few hours.
+const MAX_CONSECUTIVE_FAILURES = 5;
+const FAILURE_COOLDOWN_SECONDS = 3 * 3600;
+const FAILURE_COUNT_TTL_SECONDS = 24 * 3600;
+const FAILURE_COUNT_KEY = "crawlFlare:failures";
+const COOLDOWN_KEY = "crawlFlare:cooldown";
+
+// Only crawl while trains run (Paris local time).
+const PARIS_OPEN_HOUR = 7;
+const PARIS_CLOSE_HOUR = 22;
+
+function parisHour(date: Date): number {
+  return Number(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Paris",
+      hour: "2-digit",
+      hour12: false,
+    }).format(date),
+  );
+}
+
+function randomTtlSeconds(): number {
+  return (
+    CACHE_TTL_MIN_SECONDS +
+    Math.floor(
+      Math.random() * (CACHE_TTL_MAX_SECONDS - CACHE_TTL_MIN_SECONDS + 1),
+    )
+  );
+}
 
 /**
- * Crawler for the SNCF departures endpoint through FlareSolverr.
+ * Crawler for the SNCF station departure boards.
  *
- * No Hey API client: FlareSolverr does not publish an OpenAPI spec.
+ * Historically went through FlareSolverr ("Flare") to get past bot
+ * protection, until DataDome started blocking FlareSolverr's headless
+ * browser. The schedule-table JSON answers plain HTTP GETs unchallenged,
+ * so this now fetches it directly. The service and route names keep
+ * "CrawlFlare" to avoid breaking the public API.
  */
 @Injectable()
 export class CrawlFlareService {
   private readonly logger = new Logger(CrawlFlareService.name);
-  private readonly flaresolverrUrl?: string;
   private readonly sncfBaseUrl?: string;
-  private readonly cacheTtlSeconds: number;
 
   constructor(
     config: ConfigService,
     private readonly cache: CacheService,
   ) {
-    this.flaresolverrUrl = config.get<string>("FLARE_API_URL");
     this.sncfBaseUrl = config.get<string>("SNCF_CRAWL_FLARE_URL");
-    this.cacheTtlSeconds = config.get<number>("REDIS_CRAWL_EXPIRE") ?? 300;
   }
 
-  private ensureConfigured(): { flaresolverrUrl: string; sncfBaseUrl: string } {
-    if (!this.flaresolverrUrl || !this.sncfBaseUrl) {
+  private makeUrl(stationId: string, dataType: DataType = "Departures") {
+    if (!this.sncfBaseUrl) {
       throw new ServiceUnavailableException(
-        "FlareSolverr crawl is not configured (FLARE_API_URL / SNCF_CRAWL_FLARE_URL)",
+        "Schedule-table crawl is not configured (SNCF_CRAWL_FLARE_URL)",
       );
     }
-    return {
-      flaresolverrUrl: this.flaresolverrUrl,
-      sncfBaseUrl: this.sncfBaseUrl,
-    };
-  }
-
-  private getJsonFromHtml(html: string): CrawlFlareDeparture[] {
-    const match = html.match(REGEX_MATCH_JSON);
-
-    if (match) {
-      return JSON.parse(match[1]) as CrawlFlareDeparture[];
-    }
-
-    return [];
-  }
-
-  private makeBody(
-    stationId: string,
-    dataType: DataType = "Departures",
-  ): BodyFlare {
-    const { sncfBaseUrl } = this.ensureConfigured();
-    return {
-      cmd: "request.get",
-      url: `${sncfBaseUrl}/${dataType}/${stationId}`,
-      maxTimeout: 60000,
-    };
+    return `${this.sncfBaseUrl}/${dataType}/${stationId}`;
   }
 
   async getDepartures(
     crawlData: CrawlData,
   ): Promise<IsCached<CrawlFlareDeparture[]>> {
-    const { flaresolverrUrl } = this.ensureConfigured();
-    const body = this.makeBody(crawlData.flareId);
-    const redisKey = `crawlFlare:${body.url}`;
+    const url = this.makeUrl(crawlData.flareId);
+    const redisKey = `crawlFlare:${url}`;
 
     const cached = await this.cache.getJson<CrawlFlareDeparture[]>(redisKey);
 
     if (cached) {
       this.logger.debug(`Cache hit ${redisKey} (${cached.length} departures)`);
       if (!cached.length) {
-        this.logger.warn(`Cached FlareSolverr result is empty for ${redisKey}`);
+        this.logger.warn(`Cached schedule-table result is empty for ${redisKey}`);
       }
       return { isCached: true, data: cached };
     }
 
+    const hour = parisHour(new Date());
+    if (hour < PARIS_OPEN_HOUR || hour >= PARIS_CLOSE_HOUR) {
+      this.logger.debug(
+        `Outside service hours (${hour}h Paris) — skipping crawl of ${url}`,
+      );
+      return { isCached: false, data: [] };
+    }
+
+    if (await this.cache.getJson(COOLDOWN_KEY)) {
+      this.logger.debug(
+        `Crawl paused after repeated failures — skipping ${url}`,
+      );
+      return { isCached: false, data: [] };
+    }
+
     let resData: CrawlFlareDeparture[] = [];
-    this.logger.debug(
-      `Cache miss — crawling ${body.url} through FlareSolverr`,
-    );
+    let failed = false;
+    this.logger.debug(`Cache miss — fetching ${url}`);
     const startedAt = Date.now();
 
     try {
-      const res = await fetch(flaresolverrUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+      const res = await fetch(url, {
+        headers: { Accept: "application/json" },
       });
 
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
       }
 
-      const data = (await res.json()) as { solution: { response: string } };
-      resData = this.getJsonFromHtml(data.solution.response);
+      resData = (await res.json()) as CrawlFlareDeparture[];
 
       this.logger.debug(
-        `FlareSolverr returned ${resData.length} departures in ${Date.now() - startedAt}ms`,
-      );
-
-      if (!resData.length) {
-        this.logger.warn(
-          "FlareSolverr response contained no JSON payload (challenge page?) — " +
-            `raw response starts with: ${data.solution.response.slice(0, 500)}`,
-        );
-      }
-
-      // Empty results only stick for a short time so a transient challenge
-      // page does not blank the API for the whole cache TTL.
-      this.cache.setJson(
-        redisKey,
-        resData,
-        resData.length ? this.cacheTtlSeconds : EMPTY_CACHE_TTL_SECONDS,
+        `Schedule-table returned ${resData.length} departures in ${Date.now() - startedAt}ms`,
       );
     } catch (err) {
+      failed = true;
       this.logger.error(
-        `FlareSolverr crawl failed: ${(err as Error).message}`,
+        `Schedule-table crawl failed: ${(err as Error).message}`,
       );
+    }
+
+    // Every outcome is cached so the endpoint is hit at most once per
+    // window; failures get the short TTL to allow a quick retry.
+    this.cache.setJson(
+      redisKey,
+      resData,
+      failed ? ERROR_CACHE_TTL_SECONDS : randomTtlSeconds(),
+    );
+
+    if (failed) {
+      const failures =
+        ((await this.cache.getJson<number>(FAILURE_COUNT_KEY)) ?? 0) + 1;
+      if (failures >= MAX_CONSECUTIVE_FAILURES) {
+        this.logger.warn(
+          `${failures} consecutive crawl failures — pausing crawls for ${FAILURE_COOLDOWN_SECONDS / 3600}h`,
+        );
+        this.cache.setJson(COOLDOWN_KEY, true, FAILURE_COOLDOWN_SECONDS);
+        this.cache.setJson(FAILURE_COUNT_KEY, 0, FAILURE_COUNT_TTL_SECONDS);
+      } else {
+        this.cache.setJson(
+          FAILURE_COUNT_KEY,
+          failures,
+          FAILURE_COUNT_TTL_SECONDS,
+        );
+      }
+    } else {
+      this.cache.setJson(FAILURE_COUNT_KEY, 0, FAILURE_COUNT_TTL_SECONDS);
     }
 
     return { isCached: false, data: resData };

@@ -17,6 +17,11 @@ export class FakeCacheService {
     this.json.set(key, JSON.stringify(value));
   }
 
+  /** Test helper: the fake never expires keys, so tests drop them by hand. */
+  deleteJson(key: string): void {
+    this.json.delete(key);
+  }
+
   async getBuffer(key: string): Promise<Buffer | null> {
     return this.buffers.get(key) ?? null;
   }

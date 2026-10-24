@@ -88,9 +88,13 @@ export function mergeCrawlFlareWithScheduledData(
       return scheduled;
     }
 
-    const stopFound = crawlDeparture.stops.find((stop) =>
-      crawlData.stopToMatch.includes(stop),
-    );
+    // The schedule-table feed ships empty `stops`, so also accept a
+    // destination match (same rule as parseCrawlFlareDepartures).
+    const stopFound =
+      crawlData.stopToMatch.includes(crawlDeparture.traffic.destination) ||
+      crawlDeparture.stops.some((stop) =>
+        crawlData.stopToMatch.includes(stop),
+      );
 
     if (!stopFound) {
       return scheduled;

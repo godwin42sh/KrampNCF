@@ -135,13 +135,36 @@ describe("mergeCrawlFlareWithScheduledData", () => {
     expect(result[1]).toBe(scheduled[1]);
   });
 
-  it("leaves scheduled data untouched when the crawl stop does not match", () => {
+  it("leaves scheduled data untouched when neither stops nor destination match", () => {
     const result = mergeCrawlFlareWithScheduledData(
       scheduled,
-      [makeFlareDeparture({ trainNumber: "123456", stops: ["Elsewhere"] })],
+      [
+        makeFlareDeparture({
+          trainNumber: "123456",
+          stops: ["Elsewhere"],
+          destination: "Nowhere",
+        }),
+      ],
       crawlData,
     );
 
     expect(result[0]).toBe(scheduled[0]);
+  });
+
+  it("matches on destination when stops are empty (schedule-table feed)", () => {
+    const result = mergeCrawlFlareWithScheduledData(
+      scheduled,
+      [
+        makeFlareDeparture({
+          trainNumber: "123456",
+          stops: [],
+          trainStatus: "RETARD",
+          delay: 7,
+        }),
+      ],
+      crawlData,
+    );
+
+    expect(result[0]).toMatchObject({ delay: 7 });
   });
 });
