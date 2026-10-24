@@ -1,7 +1,11 @@
 // Variables used by Scriptable.
 // These must be at the very top of the file. Do not edit.
 // icon-color: brown; icon-glyph: magic;
-const token = "";
+// The API credentials ("user:password") live in Keychain, not in this file,
+// so copying an updated version of this script never wipes them.
+// fetchBoards in SNCFModule prompts for them on a 401 when run in the app.
+const TOKEN_KEY = "KrampNCF-token";
+const token = Keychain.contains(TOKEN_KEY) ? Keychain.get(TOKEN_KEY) : "";
 
 const correspUrlTrain = {
 //   "Étampes": "https://www.sncf.com/fr/gares/etampes/OCE87545137/departs-arrivees/gl/departs",
@@ -51,4 +55,4 @@ module.exports = { getUrlDepartures, getUrlDeparturesAuto, getUrlDeparturesCrawl
 getUrlDeparturesPrimById,
 getUrlDeparturesPrimByType,
 getUrlDeparturesSiriById,
-getUrlDeparturesSiriByType, correspUrlTrain };
+getUrlDeparturesSiriByType, correspUrlTrain, TOKEN_KEY };
