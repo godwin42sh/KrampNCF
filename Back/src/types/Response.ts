@@ -16,9 +16,9 @@ export type DeparturesResponse = {
   title: string;
   data: TrainResponse[];
   /**
-   * RTFetchType covers the scheduled-merge flows; "siri" is board-only,
-   * "crawl" is the raw ter.sncf.com dock crawl.
+   * RTFetchType covers the realtime sources; "crawl" is the raw
+   * ter.sncf.com dock crawl.
    */
-  fetchType: RTFetchType | "siri" | "crawl";
+  fetchType: RTFetchType | "crawl";
   isCached: boolean;
 };

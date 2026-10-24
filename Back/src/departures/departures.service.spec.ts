@@ -1,6 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import { ConfigService } from "@nestjs/config";
-import { NotFoundException } from "@nestjs/common";
+import {
+  NotFoundException,
+  ServiceUnavailableException,
+} from "@nestjs/common";
 
 import linesData from "../config/lines-data";
 import type { CrawlFlareService } from "../crawl/crawl-flare.service";
@@ -195,6 +198,78 @@ describe("fetchLine (crawlFlare)", () => {
       delay: 7,
       dock: "B",
     });
+  });
+});
+
+describe("fetchLineAuto", () => {
+  const broken = async () => {
+    throw new Error("source down");
+  };
+
+  it("keeps the first source when it answers, even with an empty board", async () => {
+    // Default stubs: crawlFlare succeeds with no departures.
+    const result = await makeService().fetchLineAuto(lineData, dateFrom);
+
+    expect(result.fetchType).toBe("crawlFlare");
+  });
+
+  it("falls back to the next source when one throws", async () => {
+    const service = makeService({
+      crawlFlare: { getDepartures: broken },
+    });
+
+    const result = await service.fetchLineAuto(lineData, dateFrom);
+
+    expect(result.fetchType).toBe("siri");
+  });
+
+  it("serves the pure crawl board even when the scheduled API is down", async () => {
+    const service = makeService({
+      sncf: { getDepartures: broken },
+      crawlFlare: {
+        getDepartures: async () => ({
+          isCached: false,
+          data: [
+            makeFlareDeparture({
+              trainNumber: "123456",
+              trainType: TrainType.Rémi,
+            }),
+          ],
+        }),
+      },
+    });
+
+    const result = await service.fetchLineAuto(lineData, dateFrom);
+
+    expect(result.fetchType).toBe("crawlFlare");
+    // Mainline types are normalized to the SIRI "TER" label for the widgets.
+    expect(result.data[0]).toMatchObject({
+      trainNumber: "123456",
+      trainType: "TER",
+    });
+  });
+
+  it("throws 503 when every source fails", async () => {
+    const service = makeService({
+      crawlFlare: { getDepartures: broken },
+      siriEt: { getJourneys: async () => null },
+      prim: { getDepartures: broken },
+      gtfs: { getFeed: async () => null },
+    });
+
+    expect(service.fetchLineAuto(lineData, dateFrom)).rejects.toThrow(
+      ServiceUnavailableException,
+    );
+  });
+
+  it("honours the RT_FETCH_ORDER env override", async () => {
+    const service = makeService({
+      config: { RT_FETCH_ORDER: ["siri", "crawlFlare"] },
+    });
+
+    const result = await service.fetchLineAuto(lineData, dateFrom);
+
+    expect(result.fetchType).toBe("siri");
   });
 });
 

@@ -27,11 +27,9 @@ stack.layoutHorizontally();
 stack.topAlignContent();
 stack.setPadding(10, 0, 5, 0);
 
-// SIRI ET realtime for both directions, filtered to RER C only, with a small
-// non-bold "RER" label shown in each board header (via typeLabel).
-const url = Conf.getUrlDeparturesSiriByType('train');
-const req = new Request(url);
-const reqData = await req.loadJSON();
+// Auto realtime source for both directions, filtered to RER C only, with a
+// small non-bold "RER" label shown in each board header (via typeLabel).
+const reqData = await SNCFModule.fetchBoards(Conf.getUrlDeparturesAuto());
 
 const rerBoards = Array.isArray(reqData)
   ? reqData.map((board) => ({

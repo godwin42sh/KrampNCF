@@ -259,4 +259,16 @@ const makeTrain = (stack, train, isLast, delaysOnly = false, limit = 5) => {
   }
 }
 
-module.exports = { makeTrain, setSNCFBackground, filterOnlyDelays, notifyTrainOnce };
+// Single place for the API request: a 15s timeout and a clear error when
+// the backend is unreachable (the widget then keeps its last rendered state).
+const fetchBoards = async (url) => {
+  const req = new Request(url);
+  req.timeoutInterval = 15;
+  try {
+    return await req.loadJSON();
+  } catch (e) {
+    throw new Error(`KrampNCF API request failed: ${e}`);
+  }
+}
+
+module.exports = { makeTrain, setSNCFBackground, filterOnlyDelays, notifyTrainOnce, fetchBoards };

@@ -113,11 +113,9 @@ const makeTableSection = (board, isLast) => {
   }
 };
 
-// SIRI ET realtime for both directions (Étampes and Austerlitz boards),
+// Auto realtime source for both directions (Étampes and Austerlitz boards),
 // each mixing RER C and mainline Rémi (TER).
-const url = Conf.getUrlDeparturesSiriByType('train');
-const req = new Request(url);
-const reqData = await req.loadJSON();
+const reqData = await SNCFModule.fetchBoards(Conf.getUrlDeparturesAuto());
 
 // Split into a Rémi (TER) table and a RER table, keeping both directions.
 // The type shows in each table header (small, non-bold) via typeLabel.

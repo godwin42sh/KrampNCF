@@ -15,6 +15,12 @@ const getUrlDepartures = (isRT, idDeparture) => {
   return `https://${token}@sncf.krampflix.ovh/${departuresType}/${(idDeparture ? idDeparture : "")}`;
 }
 
+// Fallback-chain endpoint: the backend answers from the first realtime
+// source that works (crawlFlare → siri → prim → gtfs). No id = both boards.
+const getUrlDeparturesAuto = (idDeparture) => {
+  return `https://${token}@sncf.krampflix.ovh/departuresAuto/${(idDeparture ? idDeparture : "")}`;
+}
+
 const getUrlDeparturesPrimByType = (type) => {
   return `https://${token}@sncf.krampflix.ovh/departuresPrimByType/${type}`;
 }
@@ -41,7 +47,7 @@ const getUrlDeparturesCrawl = (type) => {
   return `https://${token}@sncf.krampflix.ovh/departuresCrawlFlare${typeParam}`;
 }
 
-module.exports = { getUrlDepartures,  getUrlDeparturesCrawlById, getUrlDeparturesCrawl,
+module.exports = { getUrlDepartures, getUrlDeparturesAuto, getUrlDeparturesCrawlById, getUrlDeparturesCrawl,
 getUrlDeparturesPrimById,
 getUrlDeparturesPrimByType,
 getUrlDeparturesSiriById,

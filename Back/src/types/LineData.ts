@@ -16,6 +16,7 @@ export interface LineData {
   gtfsId: string;
   gtfsIdTo?: string;
   primDataId: number;
+  siriBoardId: number;
   crawlUrlParam: string;
   crawlDataId: number;
   crawlDataTrainType: TrainType,

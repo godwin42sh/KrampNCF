@@ -82,8 +82,15 @@ export class CrawlFlareService {
     return `${this.sncfBaseUrl}/${dataType}/${stationId}`;
   }
 
+  /**
+   * `strict` throws whenever the schedule table gave no real answer (fetch
+   * error, circuit-breaker cooldown, outside crawl hours) instead of
+   * degrading to an empty list, so the auto fallback flow can move on to
+   * the next realtime source. A successful empty board is not a failure.
+   */
   async getDepartures(
     crawlData: CrawlData,
+    strict = false,
   ): Promise<IsCached<CrawlFlareDeparture[]>> {
     const url = this.makeUrl(crawlData.flareId);
     const redisKey = `crawlFlare:${url}`;
@@ -103,6 +110,11 @@ export class CrawlFlareService {
       this.logger.debug(
         `Outside service hours (${hour}h Paris) — skipping crawl of ${url}`,
       );
+      if (strict) {
+        throw new ServiceUnavailableException(
+          "Outside schedule-table crawl hours",
+        );
+      }
       return { isCached: false, data: [] };
     }
 
@@ -110,6 +122,11 @@ export class CrawlFlareService {
       this.logger.debug(
         `Crawl paused after repeated failures — skipping ${url}`,
       );
+      if (strict) {
+        throw new ServiceUnavailableException(
+          "Schedule-table crawl paused after repeated failures",
+        );
+      }
       return { isCached: false, data: [] };
     }
 
@@ -165,6 +182,10 @@ export class CrawlFlareService {
       }
     } else {
       this.cache.setJson(FAILURE_COUNT_KEY, 0, FAILURE_COUNT_TTL_SECONDS);
+    }
+
+    if (failed && strict) {
+      throw new ServiceUnavailableException("Schedule-table crawl failed");
     }
 
     return { isCached: false, data: resData };

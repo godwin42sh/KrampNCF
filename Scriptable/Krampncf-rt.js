@@ -27,10 +27,8 @@ stack.layoutHorizontally();
 stack.topAlignContent();
 
 
-// SIRI ET realtime for both boards (Étampes→Austerlitz and Austerlitz→Étampes).
-const url = Conf.getUrlDeparturesSiriByType('train');
-const req = new Request(url);
-const reqData = await req.loadJSON();
+// Auto realtime source for both boards (Étampes→Austerlitz and Austerlitz→Étampes).
+const reqData = await SNCFModule.fetchBoards(Conf.getUrlDeparturesAuto());
 
 if (Array.isArray(reqData)) {
   const trainsData = delaysOnly ? SNCFModule.filterOnlyDelays(reqData) : reqData;

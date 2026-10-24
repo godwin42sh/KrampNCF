@@ -20,6 +20,7 @@ services:
       - SNCF_CRAWL_FLARE_URL=${SNCF_CRAWL_FLARE_URL:-https://www.garesetconnexions.sncf/schedule-table}
       - REDIS_CRAWL_EXPIRE=${REDIS_CRAWL_EXPIRE:-}
       - DEFAULT_FETCH_RT_METHOD=${DEFAULT_FETCH_RT_METHOD:-}
+      - RT_FETCH_ORDER=${RT_FETCH_ORDER:-}
       - AWTRIX_ICON_TER=${AWTRIX_ICON_TER:-}
       - AWTRIX_ICON_RER=${AWTRIX_ICON_RER:-}
       - LOG_LEVEL=${LOG_LEVEL:-}

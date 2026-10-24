@@ -52,11 +52,36 @@ import {
 } from "./prim.utils";
 import { buildBoardFromSiriJourneys } from "./siri.utils";
 
+/** A hung realtime source counts as failed so the auto flow can move on. */
+const AUTO_SOURCE_TIMEOUT_MS = 10_000;
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  label: string,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`${label} timed out after ${ms}ms`)),
+          ms,
+        );
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 @Injectable()
 export class DeparturesService {
   private readonly logger = new Logger(DeparturesService.name);
   private readonly awtrixIcons: AwtrixIcons;
   private readonly defaultFetchMethod: RTFetchType;
+  private readonly fetchOrder: RTFetchType[];
 
   constructor(
     config: ConfigService,
@@ -75,6 +100,13 @@ export class DeparturesService {
     // behind DataDome and no longer reachable.
     this.defaultFetchMethod =
       config.get<RTFetchType>("DEFAULT_FETCH_RT_METHOD") ?? "prim";
+    // Priority order for the auto flow: richest source first.
+    this.fetchOrder = config.get<RTFetchType[]>("RT_FETCH_ORDER") ?? [
+      "crawlFlare",
+      "siri",
+      "prim",
+      "gtfs",
+    ];
   }
 
   // --- lookups ---------------------------------------------------------
@@ -225,6 +257,7 @@ export class DeparturesService {
   private async fetchLineGtfs(
     lineData: LineData,
     dateFrom: Date,
+    strict = false,
   ): Promise<DeparturesResponse> {
     const [scheduled, feedRes, crawlDocks] = await Promise.all([
       this.sncf.getDepartures(
@@ -240,6 +273,10 @@ export class DeparturesService {
       `gtfs flow line=${lineData.id}: scheduled=${scheduled.data.length}` +
         `${scheduled.isCached ? " (cached)" : ""}, feed=${feedRes ? "ok" : "unavailable"}, docks=${crawlDocks.length}`,
     );
+
+    if (strict && !feedRes) {
+      throw new ServiceUnavailableException("GTFS-RT feed unavailable");
+    }
 
     const res = this.makeResponseScaffold(
       lineData,
@@ -286,8 +323,13 @@ export class DeparturesService {
   private async fetchLinePrim(
     lineData: LineData,
     dateFrom: Date,
+    strict = false,
   ): Promise<DeparturesResponse> {
     const primData = primsData.find((data) => data.id === lineData.primDataId);
+
+    if (strict && !primData) {
+      throw new ServiceUnavailableException("No PRIM data for this line");
+    }
 
     const [scheduled, primRes, crawlDocks] = await Promise.all([
       this.sncf.getDepartures(
@@ -296,7 +338,9 @@ export class DeparturesService {
         lineData.stopFilters,
       ),
       primData
-        ? this.prim.getDepartures(primData).catch(() => null)
+        ? strict
+          ? this.prim.getDepartures(primData)
+          : this.prim.getDepartures(primData).catch(() => null)
         : Promise.resolve(null),
       this.crawl.getDeparturesSafe(lineData),
     ]);
@@ -370,6 +414,7 @@ export class DeparturesService {
         `${scheduled.isCached ? " (cached)" : ""}, crawl=${departuresCrawl.data.length} departures`,
     );
 
+
     const res = this.makeResponseScaffold(
       lineData,
       dateFrom,
@@ -406,26 +451,93 @@ export class DeparturesService {
     };
   }
 
+  /** SIRI ET board for the line (realtime-only, no scheduled merge). */
+  private async fetchLineSiri(lineData: LineData): Promise<DeparturesResponse> {
+    return this.getSiriBoard(lineData.siriBoardId);
+  }
+
+  /** The pure crawl board for the line; throws when the crawl can't answer. */
+  private async fetchLineCrawlFlareBoard(
+    lineData: LineData,
+  ): Promise<DeparturesResponse> {
+    const crawlData = crawlsData.find(
+      (crawl) => crawl.id === lineData.crawlDataId,
+    );
+
+    if (!crawlData) {
+      throw new ServiceUnavailableException("No crawl data for this line");
+    }
+
+    const departures = await this.crawlFlare.getDepartures(crawlData, true);
+    const board = parseCrawlFlareDeparturesWithTitle(crawlData, departures);
+
+    // Widgets expect the SIRI labels: RER C stays "RER", everything
+    // mainline ("Rémi", Intercités…) shows as "TER".
+    return {
+      ...board,
+      data: board.data.map((train) => ({
+        ...train,
+        trainType: train.trainType === "RER" ? "RER" : "TER",
+      })),
+    };
+  }
+
   async fetchLine(
     lineData: LineData,
     dateFrom: Date,
-    type: RTFetchType,
+    type: RTFetchType | "auto",
+    strict = false,
   ): Promise<DeparturesResponse> {
+    if (type === "auto") {
+      return this.fetchLineAuto(lineData, dateFrom);
+    }
+
     const funcByType: Record<
       RTFetchType,
       (lineData: LineData, dateFrom: Date) => Promise<DeparturesResponse>
     > = {
-      gtfs: (line, date) => this.fetchLineGtfs(line, date),
-      prim: (line, date) => this.fetchLinePrim(line, date),
+      gtfs: (line, date) => this.fetchLineGtfs(line, date, strict),
+      prim: (line, date) => this.fetchLinePrim(line, date, strict),
       crawlFlare: (line, date) => this.fetchLineCrawlFlare(line, date),
+      siri: (line) => this.fetchLineSiri(line),
     };
 
     return funcByType[type](lineData, dateFrom);
   }
 
+  /**
+   * Try the realtime sources in configured priority order; a throw or a
+   * timeout moves to the next one. An empty board is a valid answer, not
+   * a failure. The winning source is stamped in `fetchType`.
+   */
+  async fetchLineAuto(
+    lineData: LineData,
+    dateFrom: Date,
+  ): Promise<DeparturesResponse> {
+    for (const type of this.fetchOrder) {
+      try {
+        // crawlFlare serves its pure board here (all train types, delays,
+        // platforms, no scheduled-API dependency) — the /departures merge
+        // flow is restricted to the scheduled RER C base.
+        const attempt =
+          type === "crawlFlare"
+            ? this.fetchLineCrawlFlareBoard(lineData)
+            : this.fetchLine(lineData, dateFrom, type, true);
+
+        return await withTimeout(attempt, AUTO_SOURCE_TIMEOUT_MS, type);
+      } catch (err) {
+        this.logger.warn(
+          `auto line=${lineData.id}: ${type} failed (${(err as Error).message}) — trying next source`,
+        );
+      }
+    }
+
+    throw new ServiceUnavailableException("All realtime sources failed");
+  }
+
   async fetchAllLines(
     dateFrom: Date,
-    type: RTFetchType,
+    type: RTFetchType | "auto",
     from?: string,
   ): Promise<DeparturesResponse[]> {
     const lines = this.filterByStation(linesData, from, (line) => line.title);
