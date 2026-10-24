@@ -259,15 +259,54 @@ const makeTrain = (stack, train, isLast, delaysOnly = false, limit = 5) => {
   }
 }
 
-// Single place for the API request: a 15s timeout and a clear error when
-// the backend is unreachable (the widget then keeps its last rendered state).
-const fetchBoards = async (url) => {
+// Conf URLs carry the credentials as "https://user:password@host/...".
+const withToken = (url, token) => url.replace(/\/\/[^@\/]*@/, `//${token}@`);
+const redactToken = (url) => url.replace(/\/\/[^@\/]*@/, "//");
+
+const askToken = async () => {
+  const alert = new Alert();
+  alert.title = "KrampNCF API token";
+  alert.message = "Enter the user:password for sncf.krampflix.ovh. It is saved in Keychain, so updating the scripts won't erase it.";
+  alert.addSecureTextField("user:password", "");
+  alert.addAction("Save");
+  alert.addCancelAction("Cancel");
+  if (await alert.presentAlert() === -1) return null;
+  const token = alert.textFieldValue(0).trim();
+  if (!token) return null;
+  Keychain.set(Conf.TOKEN_KEY, token);
+  return token;
+}
+
+// Single place for the API request: a 15s timeout and an error that names
+// the real problem (the widget then keeps its last rendered state).
+// nginx answers auth and gateway errors with HTML, so check the status
+// before parsing instead of letting loadJSON fail with a format error.
+const fetchBoards = async (url, retried = false) => {
   const req = new Request(url);
   req.timeoutInterval = 15;
+  let body;
   try {
-    return await req.loadJSON();
+    body = await req.loadString();
   } catch (e) {
-    throw new Error(`KrampNCF API request failed: ${e}`);
+    throw new Error(`KrampNCF API unreachable (${redactToken(url)}): ${e}`);
+  }
+
+  const status = req.response.statusCode;
+  if (status === 401) {
+    if (!retried && config.runsInApp) {
+      const token = await askToken();
+      if (token) return fetchBoards(withToken(url, token), true);
+    }
+    throw new Error("KrampNCF API: 401 unauthorized. Run this script from the Scriptable app to enter the API token.");
+  }
+  if (status < 200 || status >= 300) {
+    throw new Error(`KrampNCF API: HTTP ${status} on ${redactToken(url)}`);
+  }
+
+  try {
+    return JSON.parse(body);
+  } catch (e) {
+    throw new Error(`KrampNCF API: response from ${redactToken(url)} is not JSON`);
   }
 }
 
