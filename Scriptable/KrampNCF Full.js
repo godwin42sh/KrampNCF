@@ -20,7 +20,11 @@ else {
     widget.refreshAfterDate = new Date(dateNow.getTime() + 1000 * 60 * 15);
 }
 
-widget.setPadding(5,5,5,5);
+if (useTable) {
+  widget.setPadding(12, 10, 10, 10);
+} else {
+  widget.setPadding(5,5,5,5);
+}
 
 const addStackFromReqData = (reqData, hours) => {
     const stack = widget.addStack();
@@ -60,6 +64,7 @@ const makeTableRow = (train, station, alt) => {
   const time = timeStack.addText(train.departureTime);
   time.font = new Font(fontTextBold, 14);
   time.lineLimit = 1;
+  time.minimumScaleFactor = 0.8;
   if (train.deleted) {
     time.textColor = colorMuted;
   } else if (train.delay) {
@@ -69,6 +74,8 @@ const makeTableRow = (train, station, alt) => {
     const delayText = timeStack.addText(` +${train.delay}`);
     delayText.font = new Font(fontTextBold, 11);
     delayText.textColor = Color.red();
+    delayText.lineLimit = 1;
+    delayText.minimumScaleFactor = 0.8;
   }
   timeStack.addSpacer();
   SNCFModule.notifyTrainOnce(train, station);
@@ -94,22 +101,30 @@ const makeTableRow = (train, station, alt) => {
   voie.font = new Font(fontText, 12);
 };
 
-const makeTableSection = (board, isLast) => {
+const makeTableSection = (board, destStation, isLast) => {
   const station = board.title.split(' - ')[0];
-  const header = widget.addText(`${station} →`);
+  const headerStack = widget.addStack();
+  headerStack.setPadding(0, 6, 0, 6);
+  const header = headerStack.addText(
+    destStation ? `${station} → ${destStation}` : `${station} →`
+  );
   header.font = new Font(fontText, 11);
   header.textColor = colorMuted;
-  widget.addSpacer(3);
+  widget.addSpacer(4);
 
   const trains = board.data.slice(0, 5);
   if (trains.length === 0) {
-    const noData = widget.addText("Aucune circulation");
+    const noDataStack = widget.addStack();
+    noDataStack.setPadding(2, 6, 2, 6);
+    const noData = noDataStack.addText("Aucune circulation");
     noData.font = new Font(fontText, 12);
   }
   trains.forEach((train, i) => makeTableRow(train, station, i % 2 === 0));
 
   if (!isLast) {
-    widget.addSpacer(8);
+    // Flexible spacer: spreads the sections over the widget height instead
+    // of leaving all the empty space at the bottom.
+    widget.addSpacer();
   }
 };
 
@@ -129,7 +144,14 @@ const boardsByType = (boards, trainType, label) =>
 if (Array.isArray(reqData)) {
   if (useTable) {
     const boards = hours >= 12 ? [...reqData].reverse() : reqData;
-    boards.forEach((board, i) => makeTableSection(board, i === boards.length - 1));
+    const names = boards.map((b) => b.title.split(' - ')[0]);
+    boards.forEach((board, i) =>
+      makeTableSection(
+        board,
+        names.length > 1 ? names[(i + 1) % names.length] : undefined,
+        i === boards.length - 1
+      )
+    );
   } else {
     addStackFromReqData(boardsByType(reqData, 'TER', 'Rémi'), hours);
     addStackFromReqData(boardsByType(reqData, 'RER', 'RER'), hours);
