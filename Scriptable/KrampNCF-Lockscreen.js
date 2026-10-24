@@ -19,8 +19,7 @@ widget.refreshAfterDate = new Date(
   dateNow.getTime() + 1000 * 60 * ((hours >= 7 && hours <= 8) || (hours >= 16 && hours <= 18) ? 3 : 15)
 );
 
-const req = new Request(Conf.getUrlDeparturesSiriById(idDeparture));
-const board = await req.loadJSON();
+const board = await SNCFModule.fetchBoards(Conf.getUrlDeparturesAuto(idDeparture));
 
 // ponytail: "HH:mm" compared within the current day; a train just after
 // midnight looks past — fine for a commute widget, revisit if that matters.

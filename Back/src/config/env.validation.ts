@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const RT_FETCH_TYPES = ["gtfs", "prim", "crawlFlare"] as const;
+export const RT_FETCH_TYPES = ["gtfs", "prim", "crawlFlare", "siri"] as const;
 
 /** Ordered from least to most verbose. */
 export const LOG_LEVELS = ["error", "warn", "log", "debug", "verbose"] as const;
@@ -27,6 +27,13 @@ export const envSchema = z.object({
 
   REDIS_CRAWL_EXPIRE: z.coerce.number().int().positive().optional(),
   DEFAULT_FETCH_RT_METHOD: z.enum(RT_FETCH_TYPES).optional(),
+  // Comma-separated priority order for the auto fallback flow,
+  // e.g. "crawlFlare,siri,prim,gtfs".
+  RT_FETCH_ORDER: z
+    .string()
+    .transform((value) => value.split(",").map((type) => type.trim()))
+    .pipe(z.array(z.enum(RT_FETCH_TYPES)).min(1))
+    .optional(),
 
   AWTRIX_ICON_TER: z.string().optional(),
   AWTRIX_ICON_RER: z.string().optional(),

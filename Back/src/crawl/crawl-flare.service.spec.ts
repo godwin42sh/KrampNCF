@@ -131,6 +131,37 @@ describe("CrawlFlareService.getDepartures", () => {
     expect(await cache.getJson("crawlFlare:cooldown")).toBeNull();
   });
 
+  it("strict mode throws on a failed crawl so callers can fall back", async () => {
+    const { service } = makeService();
+    stubFetch(async () => new Response("blocked", { status: 403 }));
+
+    expect(service.getDepartures(crawlsData[0], true)).rejects.toThrow(
+      ServiceUnavailableException,
+    );
+  });
+
+  it("strict mode throws outside service hours", async () => {
+    setSystemTime(new Date("2026-07-23T23:30:00+02:00"));
+    const { service } = makeService();
+    stubFetch(async () => Response.json(departures));
+
+    expect(service.getDepartures(crawlsData[0], true)).rejects.toThrow(
+      ServiceUnavailableException,
+    );
+  });
+
+  it("strict mode throws while the circuit breaker is on cooldown", async () => {
+    const cache = new FakeCacheService();
+    cache.setJson("crawlFlare:cooldown", true, 3600);
+    const { service } = makeService(true, cache);
+    const { calls } = stubFetch(async () => Response.json(departures));
+
+    expect(service.getDepartures(crawlsData[0], true)).rejects.toThrow(
+      ServiceUnavailableException,
+    );
+    expect(calls).toHaveLength(0);
+  });
+
   it("throws 503 when the base URL is not configured", async () => {
     const { service } = makeService(false);
 

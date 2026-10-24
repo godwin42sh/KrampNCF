@@ -6,6 +6,7 @@ import {
   Param,
   ParseIntPipe,
   Query,
+  ServiceUnavailableException,
 } from "@nestjs/common";
 import {
   ApiExtraModels,
@@ -164,6 +165,57 @@ export class DeparturesController {
       dateFrom,
       this.departures.resolveFetchType(typeFetch),
     );
+
+    return this.formatBoard(board, query.format);
+  }
+
+  @Get("departuresAuto")
+  @ApiOperation({
+    summary:
+      "Departures for both directions from the first realtime source that answers (crawlFlare → siri → prim → gtfs by default)",
+  })
+  @ApiOkResponse({ schema: BOARD_OR_AWTRIX_LIST })
+  @ApiNotFoundResponse({ description: "No board departing from ?from=" })
+  @ApiServiceUnavailableResponse({
+    description: "All realtime sources failed",
+  })
+  async departuresAuto(
+    @Query() query: DeparturesAllQueryDto,
+  ): Promise<(DeparturesResponse | AwtrixResponse)[]> {
+    const dateFrom = this.parseDateFrom(query.dateFrom);
+
+    const boards = await this.departures.fetchAllLines(
+      dateFrom,
+      "auto",
+      query.from,
+    );
+
+    if (!boards.length) {
+      throw new ServiceUnavailableException("All realtime sources failed");
+    }
+
+    return this.formatBoards(boards, query.format);
+  }
+
+  @Get("departuresAuto/:id")
+  @ApiOperation({
+    summary:
+      "Departures for one line from the first realtime source that answers",
+  })
+  @ApiParam({ name: "id", type: Number, description: "Line id" })
+  @ApiOkResponse({ schema: BOARD_OR_AWTRIX })
+  @ApiNotFoundResponse({ description: "Line not found" })
+  @ApiServiceUnavailableResponse({
+    description: "All realtime sources failed",
+  })
+  async departuresAutoById(
+    @Param("id", ParseIntPipe) id: number,
+    @Query() query: DeparturesByIdQueryDto,
+  ): Promise<DeparturesResponse | AwtrixResponse> {
+    const lineData = this.departures.findLineData(id);
+    const dateFrom = this.parseDateFrom(query.dateFrom);
+
+    const board = await this.departures.fetchLine(lineData, dateFrom, "auto");
 
     return this.formatBoard(board, query.format);
   }

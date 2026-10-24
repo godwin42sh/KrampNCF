@@ -231,7 +231,8 @@
               "enum": [
                 "gtfs",
                 "prim",
-                "crawlFlare"
+                "crawlFlare",
+                "siri"
               ],
               "type": "string"
             }
@@ -309,7 +310,8 @@
               "enum": [
                 "gtfs",
                 "prim",
-                "crawlFlare"
+                "crawlFlare",
+                "siri"
               ],
               "type": "string"
             }
@@ -338,6 +340,143 @@
           }
         },
         "summary": "Scheduled departures for one line, merged with a realtime source",
+        "tags": [
+          "departures"
+        ]
+      }
+    },
+    "/departuresAuto": {
+      "get": {
+        "operationId": "DeparturesController_departuresAuto",
+        "parameters": [
+          {
+            "name": "format",
+            "required": false,
+            "in": "query",
+            "description": "Response format, defaults to json",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "json",
+                "awtrix"
+              ]
+            }
+          },
+          {
+            "name": "dateFrom",
+            "required": false,
+            "in": "query",
+            "description": "Start of the departures window (ISO 8601). Defaults to one hour ago.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Only boards departing from this station (case- and accent-insensitive, e.g. \"etampes\" or \"austerlitz\")",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "$ref": "#/components/schemas/DeparturesResponseDto"
+                      },
+                      {
+                        "$ref": "#/components/schemas/AwtrixResponseDto"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No board departing from ?from="
+          },
+          "503": {
+            "description": "All realtime sources failed"
+          }
+        },
+        "summary": "Departures for both directions from the first realtime source that answers (crawlFlare → siri → prim → gtfs by default)",
+        "tags": [
+          "departures"
+        ]
+      }
+    },
+    "/departuresAuto/{id}": {
+      "get": {
+        "operationId": "DeparturesController_departuresAutoById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Line id",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "format",
+            "required": false,
+            "in": "query",
+            "description": "Response format, defaults to json",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "json",
+                "awtrix"
+              ]
+            }
+          },
+          {
+            "name": "dateFrom",
+            "required": false,
+            "in": "query",
+            "description": "Start of the departures window (ISO 8601). Defaults to one hour ago.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/DeparturesResponseDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AwtrixResponseDto"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Line not found"
+          },
+          "503": {
+            "description": "All realtime sources failed"
+          }
+        },
+        "summary": "Departures for one line from the first realtime source that answers",
         "tags": [
           "departures"
         ]

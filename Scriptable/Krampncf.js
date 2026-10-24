@@ -27,11 +27,9 @@ stack.layoutHorizontally();
 stack.topAlignContent();
 stack.setPadding(10, 0, 5, 0);
 
-// SIRI ET realtime for one direction (widget param: 1 = Étampes→Austerlitz,
+// Auto realtime source for one direction (widget param: 1 = Étampes→Austerlitz,
 // 2 = Austerlitz→Étampes; defaults to 1). Covers RER C + mainline Rémi.
-const url = Conf.getUrlDeparturesSiriById(idDeparture || 1);
-const req = new Request(url);
-const reqData = await req.loadJSON();
+const reqData = await SNCFModule.fetchBoards(Conf.getUrlDeparturesAuto(idDeparture || 1));
 
 if (Array.isArray(reqData)) {
   if (hours >= 12) {
