@@ -23,7 +23,6 @@ export const envSchema = z.object({
   SNCF_API_PRIM_URL: z.string().optional(),
   SNCF_API_PRIM_KEY: z.string().optional(),
   SNCF_CRAWL_URL: z.string().optional(),
-  FLARE_API_URL: z.string().optional(),
   SNCF_CRAWL_FLARE_URL: z.string().optional(),
 
   REDIS_CRAWL_EXPIRE: z.coerce.number().int().positive().optional(),
