@@ -42,6 +42,10 @@ export function parseCrawlFlareDepartures(
       return;
     }
 
+    if (crawlData.excludeTrainTypes?.includes(departure.trainType)) {
+      return;
+    }
+
     if (crawlData.stopToMatch.includes(departure.traffic.destination)) {
       departures.push(
         parseCrawlFlareDeparture(crawlData.destinationName, departure),
