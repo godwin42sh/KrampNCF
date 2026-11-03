@@ -72,6 +72,26 @@ describe("parseCrawlFlareDepartures", () => {
     expect(result[0].trainType).toBe(TrainType.Ter);
   });
 
+  it("drops excluded train types (Rémi Exp skips Étampes)", () => {
+    const austerlitz = crawlsData[1]; // Austerlitz -> Étampes
+    const result = parseCrawlFlareDepartures(austerlitz, {
+      isCached: false,
+      data: [
+        makeFlareDeparture({
+          trainType: TrainType.RémiExp,
+          destination: "Orléans",
+        }),
+        makeFlareDeparture({
+          trainType: TrainType.Rémi,
+          destination: "Orléans",
+        }),
+      ],
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].trainType).toBe(TrainType.Rémi);
+  });
+
   it("maps delay, cancellation, dock and mission code", () => {
     const result = parseCrawlFlareDepartures(crawlData, {
       isCached: false,

@@ -1,4 +1,5 @@
 import { CrawlData } from "../types/CrawlData";
+import { TrainType } from "../types/CrawlFlareDeparture";
 
 const crawlsData: CrawlData[] = [
   {
@@ -14,6 +15,9 @@ const crawlsData: CrawlData[] = [
     flareId: "0087547000",
     destinationName: "Étampes",
     stopToMatch: ["Étampes", "St-Martin d'Étampes", "Orléans"],
+    // "Rémi Exp" runs Paris → Les Aubrais → Orléans without calling at
+    // Étampes; plain "Rémi" is the omnibus that does stop there.
+    excludeTrainTypes: [TrainType.RémiExp],
   },
 ];
 

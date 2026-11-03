@@ -118,5 +118,6 @@ export enum TrainType {
   Rer = "RER",
   Ter = "TER",
   Rémi = "Rémi",
+  RémiExp = "Rémi Exp",
   Transilien = "TRANSILIEN",
 }
